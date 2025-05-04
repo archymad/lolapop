@@ -46,7 +46,7 @@
         "messageVariants": true,
         "delayVariation": true,
         "typosEnabled": true,
-        "typosFrequency": 0.08,
+        "typosFrequency": 0.02,
         "emojiFrequency": 0.3
       }
     },

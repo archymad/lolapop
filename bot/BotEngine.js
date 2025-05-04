@@ -10,44 +10,142 @@ const ScenarioManager = require('./ScenarioManager');
 const NLPProcessor = require('./NLPProcessor');
 const SessionManager = require('./SessionManager');
 const MediaManager = require('./MediaManager');
+const { getLogger } = require('../utils/logger');
 
 class BotEngine {
   constructor(options) {
     this.client = options.client;
     this.configurator = options.configurator;
     
+    // Initialiser le logger
+    this.logger = options.logger || getLogger({
+      logToFile: true,
+      logDir: './logs'
+    });
+    
     // Charger les configurations
-    this.botConfig = this.configurator.getConfig('bot');
-    this.personalityConfig = this.configurator.getConfig('personality');
-    this.scenarioConfig = this.configurator.getConfig('scenario');
-    this.aiConfig = this.configurator.getConfig('ai');
-    this.mediaConfig = this.configurator.getConfig('media');
+    try {
+      this.loadConfigurations();
+      this.initializeComponents(options);
+      this.setupErrorHandlers();
+      
+      // Statistiques internes
+      this.stats = {
+        messagesReceived: 0,
+        messagesSent: 0,
+        activeUsers: 0,
+        startTime: Date.now(),
+        errors: 0,
+        nlpErrors: 0,
+        mediaErrors: 0
+      };
+      
+      this.logger.info('BotEngine initialisé avec succès', {
+        profile: this.activeProfile,
+        scenario: this.activeScenario
+      });
+    } catch (error) {
+      this.logger.error('Erreur lors de l\'initialisation du BotEngine', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
+    }
+  }
+  
+  /**
+   * Charger les configurations
+   */
+  loadConfigurations() {
+    try {
+      this.botConfig = this.configurator.getConfig('bot');
+      this.personalityConfig = this.configurator.getConfig('personality');
+      this.scenarioConfig = this.configurator.getConfig('scenario');
+      this.aiConfig = this.configurator.getConfig('ai');
+      this.mediaConfig = this.configurator.getConfig('media');
+      
+      this.logger.debug('Configurations chargées', {
+        bot: !!this.botConfig,
+        personality: !!this.personalityConfig,
+        scenario: !!this.scenarioConfig,
+        ai: !!this.aiConfig,
+        media: !!this.mediaConfig
+      });
+    } catch (error) {
+      this.logger.error('Erreur lors du chargement des configurations', {
+        error: error.message
+      });
+      throw error;
+    }
+  }
+  
+  /**
+   * Initialiser les composants
+   */
+  initializeComponents(options) {
+    try {
+      // Initialiser les scénarios et profils
+      this.activeScenario = options.activeScenario || this.botConfig.scenario.active;
+      this.activeProfile = options.activeProfile || this.botConfig.behavior.activeProfile;
+      
+      // Créer les gestionnaires
+      this.sessionManager = new SessionManager(this.botConfig.session);
+      this.personalityManager = new PersonalityManager(this.personalityConfig, this.activeProfile);
+      this.scenarioManager = new ScenarioManager(this.scenarioConfig, this.activeScenario);
+      this.nlpProcessor = new NLPProcessor(this.aiConfig, options.aiServerUrl);
+      this.mediaManager = new MediaManager(this.mediaConfig);
+      
+      this.logger.info('Composants initialisés', {
+        activeProfile: this.activeProfile,
+        activeScenario: this.activeScenario
+      });
+    } catch (error) {
+      this.logger.error('Erreur lors de l\'initialisation des composants', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
+    }
+  }
+  
+  /**
+   * Configurer les gestionnaires d'erreurs
+   */
+  setupErrorHandlers() {
+    // Gestionnaire d'erreur global pour le client WhatsApp
+    if (this.client) {
+      this.client.on('error', (error) => {
+        this.stats.errors++;
+        this.logger.error('Erreur du client WhatsApp', {
+          error: error.message,
+          stack: error.stack
+        });
+      });
+      
+      this.client.on('disconnected', (reason) => {
+        this.logger.warn('Client WhatsApp déconnecté', { reason });
+      });
+    }
     
-    // Initialiser les composants
-    this.activeScenario = options.activeScenario || this.botConfig.scenario.active;
-    this.activeProfile = options.activeProfile || this.botConfig.behavior.activeProfile;
-    
-    // Créer les gestionnaires
-    this.sessionManager = new SessionManager(this.botConfig.session);
-    this.personalityManager = new PersonalityManager(this.personalityConfig, this.activeProfile);
-    this.scenarioManager = new ScenarioManager(this.scenarioConfig, this.activeScenario);
-    this.nlpProcessor = new NLPProcessor(this.aiConfig, options.aiServerUrl);
-    this.mediaManager = new MediaManager(this.mediaConfig);
-    
-    // Statistiques internes
-    this.stats = {
-      messagesReceived: 0,
-      messagesSent: 0,
-      activeUsers: 0,
-      startTime: Date.now()
-    };
+    // Gestionnaire d'erreur global pour les promesses non gérées
+    process.on('unhandledRejection', (reason, promise) => {
+      this.stats.errors++;
+      this.logger.error('Promesse rejetée non gérée dans BotEngine', {
+        reason: reason,
+        promise: promise
+      });
+    });
   }
   
   /**
    * Appelé quand le client WhatsApp est prêt
    */
   onReady() {
-    console.log(`Bot démarré avec profil: ${this.activeProfile}, scénario: ${this.activeScenario}`);
+    this.logger.info('BotEngine prêt', {
+      profile: this.activeProfile,
+      scenario: this.activeScenario,
+      sessions: this.sessionManager.getActiveSessions().size
+    });
     this.startSessionCleanupTimer();
   }
   
@@ -57,23 +155,32 @@ class BotEngine {
   startSessionCleanupTimer() {
     const cleanupInterval = this.botConfig.session.timeout.checkInterval || 3600000; // 1h par défaut
     
-    setInterval(() => {
-      const inactiveTimeout = this.botConfig.session.timeout.inactive;
-      const now = Date.now();
-      let cleanedCount = 0;
-      
-      this.sessionManager.getAllSessions().forEach((session, chatId) => {
-        if (now - session.lastInteractionTime > inactiveTimeout) {
-          this.sessionManager.removeSession(chatId);
-          cleanedCount++;
+    this.cleanupIntervalId = setInterval(() => {
+      try {
+        const inactiveTimeout = this.botConfig.session.timeout.inactive;
+        const now = Date.now();
+        let cleanedCount = 0;
+        
+        this.sessionManager.getAllSessions().forEach((session, chatId) => {
+          if (now - session.lastInteractionTime > inactiveTimeout) {
+            this.sessionManager.removeSession(chatId);
+            cleanedCount++;
+          }
+        });
+        
+        if (cleanedCount > 0) {
+          this.logger.info('Sessions inactives nettoyées', { count: cleanedCount });
         }
-      });
-      
-      if (cleanedCount > 0) {
-        console.log(`Sessions nettoyées: ${cleanedCount}`);
+        
+        this.stats.activeUsers = this.sessionManager.getActiveSessions().size;
+        
+        // Log les statistiques périodiques
+        this.logStats();
+      } catch (error) {
+        this.logger.error('Erreur lors du nettoyage des sessions', {
+          error: error.message
+        });
       }
-      
-      this.stats.activeUsers = this.sessionManager.getActiveSessions().size;
     }, cleanupInterval);
   }
   
@@ -84,116 +191,219 @@ class BotEngine {
     const chatId = message.from;
     const messageContent = message.body.trim();
     
-    // Mettre à jour les statistiques
-    this.stats.messagesReceived++;
-    
-    // Obtenir ou créer une session
-    let session = this.sessionManager.getSession(chatId);
-    if (!session) {
-      session = this.sessionManager.createSession(chatId);
-    }
-    
-    // Mettre à jour l'heure de dernière interaction
-    session.lastInteractionTime = Date.now();
-    
-    // Analyser le message avec l'IA/NLP
-    const analysisResult = await this.nlpProcessor.analyzeMessage(messageContent, {
-      currentStep: session.currentStep,
-      previousStep: session.previousStep,
-      userData: session.userData
-    });
-    
-    // Mettre à jour les données utilisateur
-    this.updateUserData(session, analysisResult);
-    
-    // Obtenir l'étape actuelle
-    const currentStep = this.scenarioManager.getStepById(session.currentStep);
-    
-    // Valider la réponse et déterminer la prochaine étape
-    const validationResult = await this.scenarioManager.validateResponse(
-      messageContent,
-      analysisResult,
-      session,
-      currentStep
-    );
-    
-    // Si la réponse est valide, passer à l'étape suivante
-    if (validationResult.isValid) {
-      const nextStep = validationResult.nextStep || currentStep.transitions.onSuccess;
-      console.log(`Passage de l'étape ${session.currentStep} à ${nextStep}`);
+    try {
+      // Mettre à jour les statistiques
+      this.stats.messagesReceived++;
       
-      // Mettre à jour l'étape
-      session.previousStep = session.currentStep;
-      session.currentStep = nextStep;
-      session.retryCount = 0;
+      // Obtenir ou créer une session
+      let session = this.sessionManager.getSession(chatId);
+      if (!session) {
+        session = this.sessionManager.createSession(chatId);
+        this.logger.info('Nouvelle session créée', {
+          chatId: chatId.split('@')[0],
+          totalSessions: this.sessionManager.getActiveSessions().size
+        });
+      }
       
-      // Exécuter la nouvelle étape
-      await this.executeStep(session);
-    } 
-    // Sinon, essayer à nouveau ou forcer la progression si configuré
-    else if (validationResult.needsRetry) {
-      session.retryCount++;
+      // Mettre à jour l'heure de dernière interaction
+      session.lastInteractionTime = Date.now();
       
-      // Vérifier si on a atteint le nombre max de tentatives
-      const maxRetries = currentStep.validation?.maxRetries || 
-                         this.scenarioConfig.scenarios[this.activeScenario].globalRules.maxRetries || 
-                         2;
+      this.logger.debug('Message entrant', {
+        chatId: chatId.split('@')[0],
+        messageLength: messageContent.length,
+        hasMedia: message.hasMedia,
+        currentStep: session.currentStep
+      });
       
-      if (session.retryCount <= maxRetries) {
-        // Envoyer un message de relance
-        await this.sendRetryMessage(session);
-      } else {
-        // Maximum de tentatives atteint, passer à l'étape suivante ou terminer
-        const timeoutStep = currentStep.transitions.onTimeout;
+      // Analyser le message avec l'IA/NLP
+      let analysisResult = null;
+      try {
+        analysisResult = await this.nlpProcessor.analyzeMessage(messageContent, {
+          currentStep: session.currentStep,
+          previousStep: session.previousStep,
+          userData: session.userData
+        });
         
-        if (timeoutStep) {
-          console.log(`Max retries reached, moving to ${timeoutStep}`);
-          session.previousStep = session.currentStep;
-          session.currentStep = timeoutStep;
-          session.retryCount = 0;
-          
-          await this.executeStep(session);
-        }
+        this.logger.debug('Analyse NLP complétée', {
+          intent: analysisResult.intent,
+          hasLocation: analysisResult.contains_location,
+          hasAge: analysisResult.contains_age
+        });
+      } catch (nlpError) {
+        this.stats.nlpErrors++;
+        this.logger.error('Erreur NLP', {
+          error: nlpError.message,
+          messageContent: messageContent.substring(0, 50) + '...'
+        });
+        
+        // Utiliser une réponse par défaut en cas d'erreur NLP
+        analysisResult = {
+          intent: "unclear",
+          contains_location: false,
+          contains_age: false,
+          service_type: "none"
+        };
+      }
+      
+      // Mettre à jour les données utilisateur
+      this.updateUserData(session, analysisResult);
+      
+      // Obtenir l'étape actuelle
+      const currentStep = this.scenarioManager.getStepById(session.currentStep);
+      if (!currentStep) {
+        throw new Error(`Étape non trouvée: ${session.currentStep}`);
+      }
+      
+      // Valider la réponse et déterminer la prochaine étape
+      const validationResult = await this.scenarioManager.validateResponse(
+        messageContent,
+        analysisResult,
+        session,
+        currentStep
+      );
+      
+      // Gérer la transition d'étape
+      await this.handleStepTransition(session, validationResult, currentStep);
+      
+    } catch (error) {
+      this.stats.errors++;
+      this.logger.error('Erreur lors du traitement du message', {
+        error: error.message,
+        stack: error.stack,
+        chatId: chatId.split('@')[0],
+        currentStep: session?.currentStep
+      });
+      
+      // Envoyer un message d'erreur générique à l'utilisateur
+      try {
+        await this.client.sendMessage(chatId, 
+          "Désolée, j'ai rencontré un petit problème... 😅 On peut réessayer ?"
+        );
+      } catch (sendError) {
+        this.logger.error('Impossible d\'envoyer le message d\'erreur', {
+          error: sendError.message
+        });
       }
     }
-    // Forcer la progression si configuré
-    else if (validationResult.forceProgress) {
-      const nextStep = currentStep.transitions.onSuccess;
-      console.log(`Forçage du passage à l'étape ${nextStep}`);
+  }
+  
+  /**
+   * Gérer la transition d'étape
+   */
+  async handleStepTransition(session, validationResult, currentStep) {
+    try {
+      if (validationResult.isValid) {
+        const nextStep = validationResult.nextStep || currentStep.transitions.onSuccess;
+        this.logger.info('Transition d\'étape', {
+          from: session.currentStep,
+          to: nextStep,
+          retryCount: session.retryCount
+        });
+        
+        session.previousStep = session.currentStep;
+        session.currentStep = nextStep;
+        session.retryCount = 0;
+        
+        await this.executeStep(session);
+      } else if (validationResult.needsRetry) {
+        session.retryCount++;
+        
+        const maxRetries = currentStep.validation?.maxRetries || 
+                           this.scenarioConfig.scenarios[this.activeScenario].globalRules.maxRetries || 
+                           2;
+        
+        if (session.retryCount <= maxRetries) {
+          this.logger.info('Nouvelle tentative nécessaire', {
+            currentStep: session.currentStep,
+            retryCount: session.retryCount,
+            maxRetries
+          });
+          await this.sendRetryMessage(session);
+        } else {
+          this.logger.warn('Nombre maximum de tentatives atteint', {
+            currentStep: session.currentStep,
+            maxRetries
+          });
+          
+          const timeoutStep = currentStep.transitions.onTimeout;
+          if (timeoutStep) {
+            session.previousStep = session.currentStep;
+            session.currentStep = timeoutStep;
+            session.retryCount = 0;
+            await this.executeStep(session);
+          }
+        }
+      } else if (validationResult.forceProgress) {
+        const nextStep = currentStep.transitions.onSuccess;
+        this.logger.info('Forçage de la progression', {
+          from: session.currentStep,
+          to: nextStep
+        });
+        
+        session.previousStep = session.currentStep;
+        session.currentStep = nextStep;
+        session.retryCount = 0;
+        
+        await this.executeStep(session);
+      }
       
-      session.previousStep = session.currentStep;
-      session.currentStep = nextStep;
-      session.retryCount = 0;
+      // Sauvegarder la session mise à jour
+      this.sessionManager.updateSession(session.chatId, session);
       
-      await this.executeStep(session);
+    } catch (error) {
+      this.logger.error('Erreur lors de la transition d\'étape', {
+        error: error.message,
+        currentStep: session.currentStep,
+        validationResult
+      });
+      throw error;
     }
-    
-    // Sauvegarder la session mise à jour
-    this.sessionManager.updateSession(chatId, session);
   }
   
   /**
    * Mettre à jour les données utilisateur
    */
   updateUserData(session, analysisResult) {
-    // Mettre à jour la localisation si détectée
-    if (analysisResult.contains_location && analysisResult.location_name) {
-      session.userData.location = analysisResult.location_name;
-    }
-    
-    // Mettre à jour l'âge si détecté
-    if (analysisResult.contains_age && analysisResult.age_value) {
-      session.userData.age = analysisResult.age_value;
-    }
-    
-    // Mettre à jour le choix de service
-    if (analysisResult.service_type !== "none") {
-      session.userData.serviceChoice = analysisResult.service_type;
-    }
-    
-    // Mettre à jour les informations de planification
-    if (analysisResult.scheduling_info) {
-      session.userData.schedulingInfo = analysisResult.scheduling_info;
+    try {
+      // Mettre à jour la localisation si détectée
+      if (analysisResult.contains_location && analysisResult.location_name) {
+        session.userData.location = analysisResult.location_name;
+        this.logger.info('Localisation détectée', {
+          location: analysisResult.location_name,
+          chatId: session.chatId.split('@')[0]
+        });
+      }
+      
+      // Mettre à jour l'âge si détecté
+      if (analysisResult.contains_age && analysisResult.age_value) {
+        session.userData.age = analysisResult.age_value;
+        this.logger.info('Âge détecté', {
+          age: analysisResult.age_value,
+          chatId: session.chatId.split('@')[0]
+        });
+      }
+      
+      // Mettre à jour le choix de service
+      if (analysisResult.service_type !== "none") {
+        session.userData.serviceChoice = analysisResult.service_type;
+        this.logger.info('Service choisi', {
+          service: analysisResult.service_type,
+          chatId: session.chatId.split('@')[0]
+        });
+      }
+      
+      // Mettre à jour les informations de planification
+      if (analysisResult.scheduling_info) {
+        session.userData.schedulingInfo = analysisResult.scheduling_info;
+        this.logger.debug('Informations de planification mises à jour', {
+          schedulingInfo: analysisResult.scheduling_info
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erreur lors de la mise à jour des données utilisateur', {
+        error: error.message,
+        analysisResult
+      });
     }
   }
   
@@ -201,72 +411,86 @@ class BotEngine {
    * Exécuter une étape du scénario
    */
   async executeStep(session) {
-    // Obtenir les détails de l'étape
-    const step = this.scenarioManager.getStepById(session.currentStep);
-    
-    if (!step) {
-      console.error(`Étape non trouvée: ${session.currentStep}`);
-      return;
-    }
-    
-    // Ajouter les messages à la file d'attente
-    for (let i = 0; i < step.messages.length; i++) {
-      const message = step.messages[i];
+    try {
+      // Obtenir les détails de l'étape
+      const step = this.scenarioManager.getStepById(session.currentStep);
       
-      // Sélectionner une variation basée sur la personnalité
-      const messageContent = this.personalityManager.selectMessageVariation(
-        message.content,
-        message.variations
-      );
+      if (!step) {
+        throw new Error(`Étape non trouvée: ${session.currentStep}`);
+      }
       
-      // Personnaliser le message
-      const personalizedMessage = this.personalizeMessage(messageContent, session);
+      this.logger.debug('Exécution de l\'étape', {
+        stepId: session.currentStep,
+        hasMessages: !!step.messages,
+        messageCount: step.messages?.length
+      });
       
-      // Calculer le délai
-      let delay = 3000; // Délai par défaut
+      // Ajouter les messages à la file d'attente
+      for (let i = 0; i < step.messages.length; i++) {
+        const message = step.messages[i];
+        
+        // Sélectionner une variation basée sur la personnalité
+        const messageContent = this.personalityManager.selectMessageVariation(
+          message.content,
+          message.variations
+        );
+        
+        // Personnaliser le message
+        const personalizedMessage = this.personalizeMessage(messageContent, session);
+        
+        // Calculer le délai
+        let delay = 3000; // Délai par défaut
+        
+        if (message.delayMs) {
+          if (typeof message.delayMs === 'object') {
+            // Délai aléatoire entre min et max
+            delay = message.delayMs.min + Math.floor(Math.random() * (message.delayMs.max - message.delayMs.min));
+          } else {
+            delay = message.delayMs;
+          }
+        }
+        
+        // Délai cumulatif pour les messages suivants
+        const cumulativeDelay = i > 0 ? delay : 0;
+        
+        // Ajouter à la file d'attente de la session
+        session.addToQueue({
+          type: 'text',
+          content: personalizedMessage,
+          delay: delay,
+          cumulativeDelay: cumulativeDelay
+        });
+      }
       
-      if (message.delayMs) {
-        if (typeof message.delayMs === 'object') {
-          // Délai aléatoire entre min et max
-          delay = message.delayMs.min + Math.floor(Math.random() * (message.delayMs.max - message.delayMs.min));
-        } else {
-          delay = message.delayMs;
+      // Ajouter les médias à la file d'attente si nécessaire
+      if (step.mediaMessages && step.mediaMessages.length > 0) {
+        for (const mediaMessage of step.mediaMessages) {
+          const delay = mediaMessage.delayMs?.min || mediaMessage.delayMs || 5000;
+          
+          session.addToQueue({
+            type: 'media',
+            mediaType: mediaMessage.type,
+            source: mediaMessage.source,
+            caption: this.personalityManager.selectMessageVariation(
+              mediaMessage.caption?.text,
+              mediaMessage.caption?.variations
+            ),
+            delay: delay
+          });
         }
       }
       
-      // Délai cumulatif pour les messages suivants
-      const cumulativeDelay = i > 0 ? delay : 0;
-      
-      // Ajouter à la file d'attente de la session
-      session.addToQueue({
-        type: 'text',
-        content: personalizedMessage,
-        delay: delay,
-        cumulativeDelay: cumulativeDelay
-      });
-    }
-    
-    // Ajouter les médias à la file d'attente si nécessaire
-    if (step.mediaMessages && step.mediaMessages.length > 0) {
-      for (const mediaMessage of step.mediaMessages) {
-        const delay = mediaMessage.delayMs?.min || mediaMessage.delayMs || 5000;
-        
-        session.addToQueue({
-          type: 'media',
-          mediaType: mediaMessage.type,
-          source: mediaMessage.source,
-          caption: this.personalityManager.selectMessageVariation(
-            mediaMessage.caption?.text,
-            mediaMessage.caption?.variations
-          ),
-          delay: delay
-        });
+      // Démarrer le traitement de la file d'attente
+      if (!session.processingQueue) {
+        this.processMessageQueue(session);
       }
-    }
-    
-    // Démarrer le traitement de la file d'attente
-    if (!session.processingQueue) {
-      this.processMessageQueue(session);
+      
+    } catch (error) {
+      this.logger.error('Erreur lors de l\'exécution de l\'étape', {
+        error: error.message,
+        step: session.currentStep
+      });
+      throw error;
     }
   }
   
@@ -274,45 +498,61 @@ class BotEngine {
    * Envoyer un message de relance
    */
   async sendRetryMessage(session) {
-    const step = this.scenarioManager.getStepById(session.currentStep);
-    
-    if (!step || !step.retryMessages || step.retryMessages.length === 0) {
-      return;
-    }
-    
-    // Sélectionner le message de relance approprié
-    const retryIndex = Math.min(session.retryCount - 1, step.retryMessages.length - 1);
-    const retryMessage = step.retryMessages[retryIndex];
-    
-    // Sélectionner une variation et personnaliser
-    const messageContent = this.personalityManager.selectMessageVariation(
-      retryMessage.content,
-      retryMessage.variations
-    );
-    const personalizedMessage = this.personalizeMessage(messageContent, session);
-    
-    // Calculer le délai
-    let delay = 5000; // Délai par défaut
-    
-    if (retryMessage.delayMs) {
-      if (typeof retryMessage.delayMs === 'object') {
-        delay = retryMessage.delayMs.min + 
-                Math.floor(Math.random() * (retryMessage.delayMs.max - retryMessage.delayMs.min));
-      } else {
-        delay = retryMessage.delayMs;
+    try {
+      const step = this.scenarioManager.getStepById(session.currentStep);
+      
+      if (!step || !step.retryMessages || step.retryMessages.length === 0) {
+        this.logger.warn('Aucun message de relance disponible', {
+          step: session.currentStep
+        });
+        return;
       }
-    }
-    
-    // Ajouter à la file d'attente
-    session.addToQueue({
-      type: 'text',
-      content: personalizedMessage,
-      delay: delay
-    });
-    
-    // Démarrer le traitement de la file si nécessaire
-    if (!session.processingQueue) {
-      this.processMessageQueue(session);
+      
+      // Sélectionner le message de relance approprié
+      const retryIndex = Math.min(session.retryCount - 1, step.retryMessages.length - 1);
+      const retryMessage = step.retryMessages[retryIndex];
+      
+      // Sélectionner une variation et personnaliser
+      const messageContent = this.personalityManager.selectMessageVariation(
+        retryMessage.content,
+        retryMessage.variations
+      );
+      const personalizedMessage = this.personalizeMessage(messageContent, session);
+      
+      // Calculer le délai
+      let delay = 5000; // Délai par défaut
+      
+      if (retryMessage.delayMs) {
+        if (typeof retryMessage.delayMs === 'object') {
+          delay = retryMessage.delayMs.min + 
+                  Math.floor(Math.random() * (retryMessage.delayMs.max - retryMessage.delayMs.min));
+        } else {
+          delay = retryMessage.delayMs;
+        }
+      }
+      
+      // Ajouter à la file d'attente
+      session.addToQueue({
+        type: 'text',
+        content: personalizedMessage,
+        delay: delay
+      });
+      
+      // Démarrer le traitement de la file si nécessaire
+      if (!session.processingQueue) {
+        this.processMessageQueue(session);
+      }
+      
+      this.logger.debug('Message de relance programmé', {
+        retryCount: session.retryCount,
+        delay: delay
+      });
+      
+    } catch (error) {
+      this.logger.error('Erreur lors de l\'envoi du message de relance', {
+        error: error.message,
+        step: session.currentStep
+      });
     }
   }
   
@@ -322,24 +562,33 @@ class BotEngine {
   personalizeMessage(message, session) {
     if (!message) return "";
     
-    let personalizedMessage = message;
-    
-    // Remplacer les marqueurs par les données utilisateur
-    if (personalizedMessage.includes('{{location}}') && session.userData.location) {
-      personalizedMessage = personalizedMessage.replace('{{location}}', session.userData.location);
+    try {
+      let personalizedMessage = message;
+      
+      // Remplacer les marqueurs par les données utilisateur
+      if (personalizedMessage.includes('{{location}}') && session.userData.location) {
+        personalizedMessage = personalizedMessage.replace('{{location}}', session.userData.location);
+      }
+      
+      if (personalizedMessage.includes('{{nearby_village}}') && session.userData.location) {
+        const nearbyVillage = this.findNearbyVillage(session.userData.location);
+        personalizedMessage = personalizedMessage.replace('{{nearby_village}}', nearbyVillage || "près d'ici");
+      }
+      
+      if (personalizedMessage.includes('{{age}}') && session.userData.age) {
+        personalizedMessage = personalizedMessage.replace('{{age}}', session.userData.age);
+      }
+      
+      // Appliquer la personnalité (typos, emoji, etc.)
+      return this.personalityManager.applyPersonalityToMessage(personalizedMessage);
+      
+    } catch (error) {
+      this.logger.error('Erreur lors de la personnalisation du message', {
+        error: error.message,
+        message: message.substring(0, 50) + '...'
+      });
+      return message; // Retourner le message original en cas d'erreur
     }
-    
-    if (personalizedMessage.includes('{{nearby_village}}') && session.userData.location) {
-      const nearbyVillage = this.findNearbyVillage(session.userData.location);
-      personalizedMessage = personalizedMessage.replace('{{nearby_village}}', nearbyVillage || "près d'ici");
-    }
-    
-    if (personalizedMessage.includes('{{age}}') && session.userData.age) {
-      personalizedMessage = personalizedMessage.replace('{{age}}', session.userData.age);
-    }
-    
-    // Appliquer la personnalité (typos, emoji, etc.)
-    return this.personalityManager.applyPersonalityToMessage(personalizedMessage);
   }
   
   /**
@@ -375,7 +624,10 @@ class BotEngine {
         return villages[Math.floor(Math.random() * villages.length)];
       }
     } catch (error) {
-      console.error('Erreur lors de la recherche du village:', error);
+      this.logger.error('Erreur lors de la recherche du village', {
+        error: error.message,
+        location
+      });
     }
     
     return "un village pas loin";
@@ -409,9 +661,17 @@ class BotEngine {
       if (nextMessage.type === 'text') {
         await this.client.sendMessage(session.chatId, nextMessage.content);
         this.stats.messagesSent++;
+        this.logger.debug('Message texte envoyé', {
+          chatId: session.chatId.split('@')[0],
+          messageLength: nextMessage.content.length
+        });
       } else if (nextMessage.type === 'media') {
         await this.sendMedia(session.chatId, nextMessage);
         this.stats.messagesSent++;
+        this.logger.debug('Média envoyé', {
+          chatId: session.chatId.split('@')[0],
+          mediaType: nextMessage.mediaType
+        });
       }
       
       // Continuer à traiter la file d'attente
@@ -421,12 +681,17 @@ class BotEngine {
         this.processMessageQueue(session);
       }
     } catch (error) {
-      console.error('Erreur lors du traitement de la file d\'attente:', error);
+      this.stats.errors++;
+      this.logger.error('Erreur lors du traitement de la file d\'attente', {
+        error: error.message,
+        messageType: nextMessage.type,
+        chatId: session.chatId.split('@')[0]
+      });
       session.processingQueue = false;
       
       // En cas d'erreur, essayer de continuer avec le message suivant
       if (session.messageQueue.length > 0) {
-        this.processMessageQueue(session);
+        setTimeout(() => this.processMessageQueue(session), 3000);
       }
     }
   }
@@ -456,7 +721,11 @@ class BotEngine {
       const mediaPath = mediaMessage.source;
       
       if (!fs.existsSync(mediaPath)) {
-        console.error(`Média non trouvé: ${mediaPath}`);
+        this.stats.mediaErrors++;
+        this.logger.error('Média non trouvé', {
+          path: mediaPath,
+          mediaType: mediaMessage.mediaType
+        });
         return false;
       }
       
@@ -468,11 +737,38 @@ class BotEngine {
         caption: mediaMessage.caption
       });
       
+      this.logger.debug('Média envoyé avec succès', {
+        mediaType: mediaMessage.mediaType,
+        hasCaption: !!mediaMessage.caption
+      });
+      
       return true;
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du média:', error);
+      this.stats.mediaErrors++;
+      this.logger.error('Erreur lors de l\'envoi du média', {
+        error: error.message,
+        mediaType: mediaMessage.mediaType,
+        chatId: chatId.split('@')[0]
+      });
       return false;
     }
+  }
+  
+  /**
+   * Logger les statistiques
+   */
+  logStats() {
+    const uptime = Date.now() - this.stats.startTime;
+    
+    this.logger.info('Statistiques du bot', {
+      uptime: Math.floor(uptime / 1000) + 's',
+      messagesReceived: this.stats.messagesReceived,
+      messagesSent: this.stats.messagesSent,
+      activeUsers: this.stats.activeUsers,
+      errors: this.stats.errors,
+      nlpErrors: this.stats.nlpErrors,
+      mediaErrors: this.stats.mediaErrors
+    });
   }
   
   /**
@@ -485,6 +781,36 @@ class BotEngine {
       uptime,
       activeUsers: this.sessionManager.getActiveSessions().size
     };
+  }
+  
+  /**
+   * Arrêter proprement le BotEngine
+   */
+  async shutdown() {
+    try {
+      this.logger.info('Arrêt du BotEngine...');
+      
+      // Arrêter le timer de nettoyage
+      if (this.cleanupIntervalId) {
+        clearInterval(this.cleanupIntervalId);
+      }
+      
+      // Sauvegarder les sessions si nécessaire
+      if (this.sessionManager && this.sessionManager.saveSessions) {
+        this.sessionManager.saveSessions();
+      }
+      
+      // Logger les statistiques finales
+      this.logStats();
+      
+      this.logger.info('BotEngine arrêté avec succès');
+    } catch (error) {
+      this.logger.error('Erreur lors de l\'arrêt du BotEngine', {
+        error: error.message,
+        stack: error.stack
+      });
+      throw error;
+    }
   }
 }
 

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Administration Bot Conversationnel</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
   <style>
     .json-editor { 
       height: 400px; 
@@ -13,6 +14,103 @@
     }
     .nav-tabs {
       margin-bottom: 20px;
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-running {
+      background-color: #28a745;
+      animation: pulse 2s infinite;
+    }
+    .status-stopped {
+      background-color: #dc3545;
+    }
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+      }
+    }
+    .log-container {
+      height: 300px;
+      overflow-y: auto;
+      background-color: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      color: #d4d4d4;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      padding: 2px 0;
+      border-bottom: 1px solid #333;
+    }
+    .log-timestamp {
+      color: #858585;
+      margin-right: 8px;
+    }
+    .log-level {
+      font-weight: bold;
+      margin-right: 8px;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    .log-level-info {
+      color: #58a6ff;
+      background-color: rgba(88, 166, 255, 0.1);
+    }
+    .log-level-warn {
+      color: #ffa657;
+      background-color: rgba(255, 166, 87, 0.1);
+    }
+    .log-level-error {
+      color: #f85149;
+      background-color: rgba(248, 81, 73, 0.1);
+    }
+    .log-level-debug {
+      color: #8b949e;
+      background-color: rgba(139, 148, 158, 0.1);
+    }
+    .log-message {
+      color: #d4d4d4;
+    }
+    .log-metadata {
+      color: #8b949e;
+      font-size: 11px;
+      margin-left: 20px;
+    }
+    .log-filters {
+      margin-bottom: 10px;
+    }
+    .connection-status {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+    }
+    .connection-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    .connected {
+      background-color: #28a745;
+    }
+    .disconnected {
+      background-color: #dc3545;
     }
   </style>
 </head>
@@ -41,13 +139,69 @@
       </div>
       <div class="col-md-6">
         <div class="card">
-          <div class="card-header bg-info text-white">
-            Actions
+          <div class="card-header bg-success text-white">
+            Contrôle du Bot
           </div>
           <div class="card-body">
+            <div class="mb-3">
+              <h5>
+                <span id="botStatusIndicator" class="status-indicator status-stopped"></span>
+                Status: <span id="botStatusText">Arrêté</span>
+              </h5>
+            </div>
             <div class="d-grid gap-2">
-              <button id="restartBot" class="btn btn-warning">Redémarrer le Bot</button>
-              <button id="resetConfig" class="btn btn-danger">Réinitialiser les Configurations</button>
+              <button id="startBot" class="btn btn-success">
+                <i class="bi bi-play-fill"></i> Démarrer le Bot
+              </button>
+              <button id="stopBot" class="btn btn-danger" disabled>
+                <i class="bi bi-stop-fill"></i> Arrêter le Bot
+              </button>
+              <button id="restartBot" class="btn btn-warning" disabled>
+                <i class="bi bi-arrow-clockwise"></i> Redémarrer le Bot
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section améliorée pour les logs en temps réel -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-dark text-white position-relative">
+            Logs du Bot en temps réel
+            <div class="connection-status">
+              <span id="connectionIndicator" class="connection-indicator disconnected"></span>
+              <span id="connectionText">Déconnecté</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="log-filters mb-2">
+              <div class="btn-group" role="group">
+                <input type="checkbox" class="btn-check" id="filterInfo" checked>
+                <label class="btn btn-outline-primary btn-sm" for="filterInfo">Info</label>
+                
+                <input type="checkbox" class="btn-check" id="filterWarn" checked>
+                <label class="btn btn-outline-warning btn-sm" for="filterWarn">Warn</label>
+                
+                <input type="checkbox" class="btn-check" id="filterError" checked>
+                <label class="btn btn-outline-danger btn-sm" for="filterError">Error</label>
+                
+                <input type="checkbox" class="btn-check" id="filterDebug">
+                <label class="btn btn-outline-secondary btn-sm" for="filterDebug">Debug</label>
+              </div>
+              <button id="clearLogs" class="btn btn-outline-secondary btn-sm ms-3">
+                <i class="bi bi-trash"></i> Effacer
+              </button>
+              <button id="pauseLogs" class="btn btn-outline-secondary btn-sm ms-1">
+                <i class="bi bi-pause-fill"></i> Pause
+              </button>
+            </div>
+            <div id="logContainer" class="log-container">
+              <div id="logContent">
+                Connexion au serveur de logs...
+              </div>
             </div>
           </div>
         </div>
@@ -100,11 +254,24 @@
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    let ws = null;
+    let logsPaused = false;
+    const activeFilters = {
+      info: true,
+      warn: true,
+      error: true,
+      debug: false
+    };
+    
     document.addEventListener('DOMContentLoaded', function() {
       // Charger les configurations
       loadAllConfigs();
       loadActiveConfig();
       loadProfilesAndScenarios();
+      checkBotStatus();
+      
+      // Initialiser la connexion WebSocket
+      connectWebSocket();
       
       // Événements de sauvegarde
       document.getElementById('saveBotConfig').addEventListener('click', () => saveConfig('bot'));
@@ -114,11 +281,151 @@
       document.getElementById('saveMediaConfig').addEventListener('click', () => saveConfig('media'));
       document.getElementById('saveActiveConfig').addEventListener('click', saveActiveConfig);
       
-      // Fonctions d'administration
+      // Contrôle du bot
+      document.getElementById('startBot').addEventListener('click', startBot);
+      document.getElementById('stopBot').addEventListener('click', stopBot);
       document.getElementById('restartBot').addEventListener('click', restartBot);
-      document.getElementById('resetConfig').addEventListener('click', resetConfig);
+      
+      // Contrôles des logs
+      document.getElementById('clearLogs').addEventListener('click', clearLogs);
+      document.getElementById('pauseLogs').addEventListener('click', togglePauseLogs);
+      
+      // Filtres de logs
+      ['filterInfo', 'filterWarn', 'filterError', 'filterDebug'].forEach(id => {
+        document.getElementById(id).addEventListener('change', (e) => {
+          const level = id.replace('filter', '').toLowerCase();
+          activeFilters[level] = e.target.checked;
+          filterLogs();
+        });
+      });
+      
+      // Vérifier le statut du bot toutes les 5 secondes
+      setInterval(checkBotStatus, 5000);
     });
     
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        updateConnectionStatus(true);
+        console.log('WebSocket connecté');
+      };
+      
+      ws.onclose = () => {
+        updateConnectionStatus(false);
+        console.log('WebSocket déconnecté');
+        // Tenter de se reconnecter après 5 secondes
+        setTimeout(connectWebSocket, 5000);
+      };
+      
+      ws.onerror = (error) => {
+        console.error('Erreur WebSocket:', error);
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'log' && !logsPaused) {
+            appendLogEntry(data.data);
+          } else if (data.type === 'history') {
+            // Effacer les logs existants et charger l'historique
+            clearLogs();
+            data.logs.forEach(log => appendLogEntry(log));
+          }
+        } catch (error) {
+          console.error('Erreur lors du parsing du message WebSocket:', error);
+        }
+      };
+    }
+    
+    function updateConnectionStatus(connected) {
+      const indicator = document.getElementById('connectionIndicator');
+      const text = document.getElementById('connectionText');
+      
+      if (connected) {
+        indicator.className = 'connection-indicator connected';
+        text.textContent = 'Connecté';
+      } else {
+        indicator.className = 'connection-indicator disconnected';
+        text.textContent = 'Déconnecté';
+      }
+    }
+    
+    function appendLogEntry(logData) {
+      const logContent = document.getElementById('logContent');
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.dataset.level = logData.level;
+      
+      // Vérifier si ce niveau de log est actif
+      if (!activeFilters[logData.level]) {
+        logEntry.style.display = 'none';
+      }
+      
+      const timestamp = new Date(logData.timestamp).toLocaleTimeString();
+      
+      logEntry.innerHTML = `
+        <span class="log-timestamp">${timestamp}</span>
+        <span class="log-level log-level-${logData.level}">${logData.level.toUpperCase()}</span>
+        <span class="log-message">${escapeHtml(logData.message)}</span>
+        ${logData.metadata && Object.keys(logData.metadata).length > 0 ? 
+          `<div class="log-metadata">${JSON.stringify(logData.metadata)}</div>` : ''}
+      `;
+      
+      logContent.appendChild(logEntry);
+      
+      // Auto-scroll vers le bas
+      const logContainer = document.getElementById('logContainer');
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // Limiter le nombre de logs affichés (garder les 500 derniers)
+      while (logContent.children.length > 500) {
+        logContent.removeChild(logContent.firstChild);
+      }
+    }
+    
+    function clearLogs() {
+      const logContent = document.getElementById('logContent');
+      logContent.innerHTML = '';
+    }
+    
+    function togglePauseLogs() {
+      logsPaused = !logsPaused;
+      const pauseBtn = document.getElementById('pauseLogs');
+      
+      if (logsPaused) {
+        pauseBtn.innerHTML = '<i class="bi bi-play-fill"></i> Reprendre';
+        pauseBtn.classList.add('btn-primary');
+        pauseBtn.classList.remove('btn-outline-secondary');
+      } else {
+        pauseBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Pause';
+        pauseBtn.classList.remove('btn-primary');
+        pauseBtn.classList.add('btn-outline-secondary');
+      }
+    }
+    
+    function filterLogs() {
+      const logEntries = document.querySelectorAll('.log-entry');
+      logEntries.forEach(entry => {
+        const level = entry.dataset.level;
+        entry.style.display = activeFilters[level] ? 'block' : 'none';
+      });
+    }
+    
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+    
+    // Fonctions existantes...
     async function loadAllConfigs() {
       try {
         const response = await fetch('/api/config');
@@ -236,15 +543,80 @@
       }
     }
     
-    function restartBot() {
-      // Cette fonction serait à implémenter côté serveur
-      showNotification('Fonctionnalité en cours de développement', 'info');
+    async function startBot() {
+      try {
+        const response = await fetch('/api/bot/start', {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification('Bot démarré avec succès', 'success');
+          updateBotStatus('running');
+        } else {
+          showNotification(`Erreur: ${result.message}`, 'danger');
+        }
+      } catch (error) {
+        showNotification(`Erreur: ${error.message}`, 'danger');
+      }
     }
     
-    function resetConfig() {
-      if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les configurations ?')) {
-        // Cette fonction serait à implémenter côté serveur
-        showNotification('Fonctionnalité en cours de développement', 'info');
+    async function stopBot() {
+      try {
+        const response = await fetch('/api/bot/stop', {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification('Bot arrêté avec succès', 'success');
+          updateBotStatus('stopped');
+        } else {
+          showNotification(`Erreur: ${result.message}`, 'danger');
+        }
+      } catch (error) {
+        showNotification(`Erreur: ${error.message}`, 'danger');
+      }
+    }
+    
+    async function restartBot() {
+      await stopBot();
+      setTimeout(() => {
+        startBot();
+      }, 2000);
+    }
+    
+    async function checkBotStatus() {
+      try {
+        const response = await fetch('/api/bot/status');
+        const { status } = await response.json();
+        updateBotStatus(status);
+      } catch (error) {
+        console.error('Erreur lors de la vérification du statut:', error);
+      }
+    }
+    
+    function updateBotStatus(status) {
+      const indicator = document.getElementById('botStatusIndicator');
+      const statusText = document.getElementById('botStatusText');
+      const startBtn = document.getElementById('startBot');
+      const stopBtn = document.getElementById('stopBot');
+      const restartBtn = document.getElementById('restartBot');
+      
+      if (status === 'running') {
+        indicator.className = 'status-indicator status-running';
+        statusText.textContent = 'En cours d\'exécution';
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        restartBtn.disabled = false;
+      } else {
+        indicator.className = 'status-indicator status-stopped';
+        statusText.textContent = 'Arrêté';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        restartBtn.disabled = true;
       }
     }
     

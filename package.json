@@ -7,7 +7,9 @@
         "start": "node bot/index.js",
         "start:ai": "cd ai && python model_server.py",
         "start:admin": "node admin.js",
-        "start:all": "concurrently \"npm run start\" \"npm run start:ai\" \"npm run start:admin\"",
+        "start:all": "node orchestrator.js",
+        "start:bot-only": "node bot/index.js",
+        "start:services": "concurrently \"npm run start:ai\" \"npm run start:admin\"",
         "init": "node init.js"
     },
     "author": "Projet Fictif",
@@ -22,19 +24,20 @@
         "dotenv": "^16.5.0",
         "express": "^4.21.2",
         "qrcode-terminal": "^0.12.0",
-        "whatsapp-web.js": "^1.27.0"
+        "whatsapp-web.js": "^1.27.0",
+        "ws": "^8.14.2"
     },
     "engines": {
         "node": ">=14.0.0"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/archymad/chatbotlama.git"
+        "url": "git+https://github.com/archymad/lolapop.git"
     },
     "keywords": [],
     "type": "commonjs",
     "bugs": {
-        "url": "https://github.com/archymad/chatbotlama/issues"
+        "url": "https://github.com/archymad/lolapop/issues"
     },
-    "homepage": "https://github.com/archymad/chatbotlama#readme"
+    "homepage": "https://github.com/archymad/lolapop#readme"
 }
