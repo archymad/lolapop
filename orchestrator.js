@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+require('dotenv').config();
+
 /**
  * Orchestrateur principal pour gérer le démarrage des composants
  * Gère le serveur NLP, l'interface admin et le bot WhatsApp
@@ -5,152 +8,184 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
-const fs = require('fs');
+const axios = require('axios');
 const chalk = require('chalk');
 const { getLogger } = require('./utils/logger');
 
 class Orchestrator {
   constructor() {
+    // Processus enfants
     this.processes = {
       nlp: null,
       admin: null,
       bot: null
     };
-    
+
+    // Configuration
     this.config = {
+      // Ports et URLs
       nlpPort: process.env.FLASK_PORT || 5000,
       adminPort: process.env.ADMIN_PORT || 3000,
+      nlpBaseUrl: process.env.NLP_SERVER_URL || `http://${process.env.FLASK_HOST || '127.0.0.1'}:${process.env.FLASK_PORT || 5000}`,
+      ollamaBaseUrl: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434',
+      // Commande Python selon OS
       nlpCommand: process.platform === 'win32' ? 'python' : 'python3'
     };
-    
-    this.botStatus = 'stopped';
-    
-    // Initialiser le logger
+
+    // Endpoints santé
+    this.config.nlpHealthUrl = `${this.config.nlpBaseUrl}/api/health`;
+    this.config.ollamaHealthUrl = `${this.config.ollamaBaseUrl}/api/tags`;
+
+    // Logger
     this.logger = getLogger({
       logToFile: true,
       logDir: './logs'
     });
+
+    this.botStatus = 'stopped';
   }
 
   /**
-   * Démarre le serveur NLP
+   * Vérifie que Ollama est en cours d'exécution
+   */
+  async checkOllama() {
+    this.logger.info('🔍 Vérification du serveur Ollama...');
+    try {
+      await axios.get(this.config.ollamaHealthUrl, { timeout: 5000 });
+      this.logger.info('✓ Ollama est en cours d\'exécution');
+    } catch (err) {
+      this.logger.error('✗ Impossible de joindre Ollama', { message: err.message });
+      throw new Error('Ollama n\'est pas démarré ou injoignable');
+    }
+  }
+
+  /**
+   * Vérifie la santé du serveur NLP Flask (endpoint /api/health)
+   */
+  async checkNLPHealth() {
+    this.logger.info('🔍 Vérification du serveur NLP...');
+    const maxAttempts = 10;
+    for (let i = 1; i <= maxAttempts; i++) {
+      try {
+        const { data } = await axios.get(this.config.nlpHealthUrl, { timeout: 5000 });
+        if (data.status === 'ok') {
+          this.logger.info('✓ NLP server is healthy');
+          return;
+        } else {
+          this.logger.warn(`Health check responded with error: ${JSON.stringify(data)}`);
+        }
+      } catch (err) {
+        this.logger.debug(`Tentative ${i}/${maxAttempts} échouée: ${err.message}`);
+      }
+      await new Promise(res => setTimeout(res, 1000));
+    }
+    throw new Error('Le serveur NLP n\'est pas disponible après plusieurs tentatives');
+  }
+
+  /**
+   * Démarre le serveur NLP (Flask)
    */
   async startNLPServer() {
     this.logger.info('🚀 Démarrage du serveur NLP...');
-    
-    return new Promise((resolve, reject) => {
-      const nlpProcess = spawn(this.config.nlpCommand, ['ai/model_server.py'], {
-        stdio: 'pipe',
-        env: { ...process.env, FLASK_PORT: this.config.nlpPort }
-      });
+    const script = path.join(__dirname, 'ai', 'model_server.py');
+    const env = { ...process.env, FLASK_PORT: this.config.nlpPort };
 
-      nlpProcess.stdout.on('data', (data) => {
-        const message = data.toString().trim();
-        this.logger.debug('[NLP Output]', { message });
-        if (message.includes('Running on')) {
-          this.logger.info('Serveur NLP démarré avec succès', { 
-            port: this.config.nlpPort 
-          });
-          resolve(nlpProcess);
-        }
-      });
-
-      nlpProcess.stderr.on('data', (data) => {
-        const message = data.toString().trim();
-        this.logger.error('[NLP Error]', { message });
-      });
-
-      nlpProcess.on('error', (error) => {
-        this.logger.error('Erreur lors du démarrage du serveur NLP', { 
-          error: error.message,
-          stack: error.stack 
-        });
-        reject(error);
-      });
-
-      nlpProcess.on('exit', (code, signal) => {
-        if (code !== 0) {
-          this.logger.error('Le serveur NLP s\'est arrêté de manière inattendue', { 
-            code, 
-            signal 
-          });
-        }
-      });
-
-      this.processes.nlp = nlpProcess;
+    const nlpProcess = spawn(this.config.nlpCommand, [script], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env
     });
+    this.processes.nlp = nlpProcess;
+
+    // Logger des sorties
+    nlpProcess.stdout.on('data', data => {
+      this.logger.debug('[NLP Output]', { message: data.toString().trim() });
+    });
+    nlpProcess.stderr.on('data', data => {
+      this.logger.error('[NLP Error]', { message: data.toString().trim() });
+    });
+    nlpProcess.on('exit', (code, signal) => {
+      if (code !== 0) {
+        this.logger.error('Le serveur NLP s\'est arrêté de manière inattendue', { code, signal });
+      }
+    });
+
+    // Vérifier la santé après démarrage
+    await this.checkNLPHealth();
   }
 
   /**
-   * Démarre l'interface d'administration
+   * Démarre l'interface d'administration (Express)
    */
   async startAdminServer() {
     this.logger.info('🚀 Démarrage de l\'interface d\'administration...');
-    
     return new Promise((resolve, reject) => {
       const adminProcess = spawn('node', ['admin.js'], {
-        stdio: 'pipe',
+        stdio: ['ignore', 'pipe', 'pipe'],
         env: { ...process.env, PORT: this.config.adminPort }
       });
+      this.processes.admin = adminProcess;
 
-      adminProcess.stdout.on('data', (data) => {
-        const message = data.toString().trim();
-        this.logger.debug('[Admin Output]', { message });
-        if (message.includes('Interface d\'administration démarrée')) {
-          this.logger.info('Interface d\'administration démarrée avec succès', { 
-            port: this.config.adminPort,
+      adminProcess.stdout.on('data', data => {
+        const msg = data.toString().trim();
+        this.logger.debug('[Admin Output]', { message: msg });
+        if (msg.includes('Interface d\'administration démarrée')) {
+          this.logger.info('✓ Interface d\'administration démarrée', {
             url: `http://localhost:${this.config.adminPort}`
           });
-          resolve(adminProcess);
+          resolve();
         }
       });
-
-      adminProcess.stderr.on('data', (data) => {
-        const message = data.toString().trim();
-        this.logger.error('[Admin Error]', { message });
+      adminProcess.stderr.on('data', data => {
+        this.logger.error('[Admin Error]', { message: data.toString().trim() });
       });
-
-      adminProcess.on('error', (error) => {
-        this.logger.error('Erreur lors du démarrage de l\'interface admin', { 
-          error: error.message,
-          stack: error.stack 
-        });
-        reject(error);
+      adminProcess.on('error', err => {
+        this.logger.error('Erreur démarrage interface admin', { message: err.message });
+        reject(err);
       });
-
       adminProcess.on('exit', (code, signal) => {
         if (code !== 0) {
-          this.logger.error('L\'interface admin s\'est arrêtée de manière inattendue', { 
-            code, 
-            signal 
-          });
+          this.logger.error('Interface admin arrêtée de manière inattendue', { code, signal });
         }
       });
-
-      this.processes.admin = adminProcess;
     });
   }
 
   /**
-   * Ouvre le navigateur sur l'interface d'administration
+   * Ouvre le navigateur vers l'interface admin
    */
   async openBrowser() {
     const url = `http://localhost:${this.config.adminPort}`;
     this.logger.info('🌐 Ouverture du navigateur', { url });
-    
-    const start = process.platform === 'darwin' ? 'open' : 
-                  process.platform === 'win32' ? 'start' : 'xdg-open';
-    
-    const { exec } = require('child_process');
-    exec(`${start} ${url}`, (error) => {
-      if (error) {
-        this.logger.error('Erreur lors de l\'ouverture du navigateur', { 
-          error: error.message 
-        });
-      } else {
-        this.logger.info('Navigateur ouvert avec succès');
-      }
+    const opener = process.platform === 'darwin' ? 'open'
+                  : process.platform === 'win32' ? 'start'
+                  : 'xdg-open';
+    require('child_process').exec(`${opener} ${url}`, err => {
+      if (err) this.logger.error('Erreur ouverture navigateur', { message: err.message });
+      else    this.logger.info('Navigateur ouvert avec succès');
     });
+  }
+
+  /**
+   * Démarre tous les services (Ollama, NLP, Admin)
+   */
+  async startServices() {
+    try {
+      this.logger.info('🚀 Démarrage des services...');
+      await this.checkOllama();
+      await this.startNLPServer();
+      await this.startAdminServer();
+      // Pause pour stabilité
+      await new Promise(res => setTimeout(res, 2000));
+      await this.openBrowser();
+      this.logger.info('✨ Services démarrés avec succès!', {
+        nlp: this.config.nlpBaseUrl,
+        admin: `http://localhost:${this.config.adminPort}`
+      });
+    } catch (err) {
+      this.logger.error('Erreur démarrage services', { message: err.message });
+      this.cleanup();
+      process.exit(1);
+    }
   }
 
   /**
@@ -158,233 +193,78 @@ class Orchestrator {
    */
   async startBot() {
     this.logger.info('🤖 Démarrage du bot WhatsApp...');
-    
     return new Promise((resolve, reject) => {
-      const botProcess = spawn('node', ['bot/index.js'], {
-        stdio: 'pipe',
-        env: process.env
-      });
-
-      botProcess.stdout.on('data', (data) => {
-        const message = data.toString().trim();
-        this.logger.debug('[Bot Output]', { message });
-        
-        // Détecter les messages importants du bot
-        if (message.includes('Client WhatsApp prêt')) {
-          this.logger.info('Bot WhatsApp démarré avec succès');
-          this.botStatus = 'running';
-        } else if (message.includes('QR Code')) {
-          this.logger.info('QR Code généré - Scannez avec WhatsApp');
-        } else if (message.includes('Authentification réussie')) {
-          this.logger.info('Authentification WhatsApp réussie');
+      const botProcess = spawn('node', ['bot/index.js'], { stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
+      this.processes.bot = botProcess;
+      botProcess.stdout.on('data', data => {
+        const msg = data.toString().trim();
+        this.logger.debug('[Bot Output]', { message: msg });
+        if (msg.includes('Client WhatsApp prêt')) {
+          this.logger.info('✓ Bot WhatsApp démarré');
+          resolve();
+        } else if (msg.includes('QR Code')) {
+          this.logger.info('QR Code généré - scannez');
         }
       });
-
-      botProcess.stderr.on('data', (data) => {
-        const message = data.toString().trim();
-        this.logger.error('[Bot Error]', { message });
+      botProcess.stderr.on('data', data => this.logger.error('[Bot Error]', { message: data.toString().trim() }));
+      botProcess.on('error', err => {
+        this.logger.error('Erreur démarrage bot', { message: err.message });
+        reject(err);
       });
-
-      botProcess.on('error', (error) => {
-        this.logger.error('Erreur lors du démarrage du bot', { 
-          error: error.message,
-          stack: error.stack 
-        });
-        reject(error);
-      });
-
       botProcess.on('exit', (code, signal) => {
         this.botStatus = 'stopped';
         if (code !== 0) {
-          this.logger.error('Le bot s\'est arrêté de manière inattendue', { 
-            code, 
-            signal 
-          });
+          this.logger.error('Bot arrêté de façon inattendue', { code, signal });
         } else {
           this.logger.info('Bot arrêté normalement');
         }
       });
-
-      this.processes.bot = botProcess;
-      resolve(botProcess);
     });
   }
 
   /**
-   * Arrête le bot WhatsApp
-   */
-  async stopBot() {
-    if (this.processes.bot) {
-      this.logger.info('🛑 Arrêt du bot WhatsApp...');
-      this.processes.bot.kill('SIGINT');
-      this.processes.bot = null;
-      this.botStatus = 'stopped';
-      this.logger.info('Bot WhatsApp arrêté avec succès');
-    } else {
-      this.logger.warn('Tentative d\'arrêt du bot mais aucun processus actif trouvé');
-    }
-  }
-
-  /**
-   * Démarre tous les services sauf le bot
-   */
-  async startServices() {
-    try {
-      this.logger.info('🚀 Démarrage des services...');
-      
-      // Vérifie si Ollama est en cours d'exécution
-      await this.checkOllama();
-      
-      // Démarre le serveur NLP
-      await this.startNLPServer();
-      this.logger.info('✓ Serveur NLP démarré');
-      
-      // Démarre l'interface d'administration
-      await this.startAdminServer();
-      this.logger.info('✓ Interface d\'administration démarrée');
-      
-      // Attend un peu pour que les serveurs soient bien démarrés
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Ouvre le navigateur
-      await this.openBrowser();
-      
-      this.logger.info('✨ Services démarrés avec succès!', {
-        services: {
-          nlp: `http://localhost:${this.config.nlpPort}`,
-          admin: `http://localhost:${this.config.adminPort}`
-        }
-      });
-      
-      this.logger.info('Connectez-vous à l\'interface d\'administration pour configurer et démarrer le bot');
-      
-    } catch (error) {
-      this.logger.error('Erreur lors du démarrage des services', { 
-        error: error.message,
-        stack: error.stack 
-      });
-      this.cleanup();
-      process.exit(1);
-    }
-  }
-
-  /**
-   * Vérifie si Ollama est en cours d'exécution
-   */
-  async checkOllama() {
-    const http = require('http');
-    
-    this.logger.info('Vérification du serveur Ollama...');
-    
-    return new Promise((resolve, reject) => {
-      const options = {
-        host: 'localhost',
-        port: 11434,
-        path: '/api/tags',
-        timeout: 2000
-      };
-
-      const req = http.get(options, (res) => {
-        if (res.statusCode === 200) {
-          this.logger.info('✓ Ollama est en cours d\'exécution');
-          resolve();
-        } else {
-          const error = new Error('Ollama ne répond pas correctement');
-          this.logger.error('Ollama n\'est pas prêt', { 
-            statusCode: res.statusCode 
-          });
-          reject(error);
-        }
-      });
-
-      req.on('timeout', () => {
-        req.destroy();
-        const error = new Error('Ollama n\'est pas accessible');
-        this.logger.error('Timeout lors de la connexion à Ollama');
-        reject(error);
-      });
-
-      req.on('error', (error) => {
-        this.logger.error('Ollama n\'est pas démarré', { 
-          error: error.message,
-          solution: 'Veuillez exécuter "ollama serve" dans un autre terminal'
-        });
-        reject(new Error('Ollama n\'est pas démarré. Veuillez exécuter "ollama serve" dans un autre terminal.'));
-      });
-    });
-  }
-
-  /**
-   * Nettoie les processus en cours
+   * Stoppe tous les processus enfants
    */
   cleanup() {
     this.logger.info('🧹 Nettoyage des processus...');
-    
-    Object.entries(this.processes).forEach(([name, process]) => {
-      if (process) {
+    Object.entries(this.processes).forEach(([name, proc]) => {
+      if (proc) {
         this.logger.info(`Arrêt de ${name}...`);
-        try {
-          process.kill('SIGINT');
-          this.logger.info(`${name} arrêté avec succès`);
-        } catch (error) {
-          this.logger.error(`Erreur lors de l'arrêt de ${name}`, { 
-            error: error.message 
-          });
-        }
+        try { proc.kill('SIGINT'); }
+        catch (err) { this.logger.error(`Erreur arrêt ${name}`, { message: err.message }); }
       }
     });
   }
 
   /**
-   * Gère les signaux d'arrêt
+   * Configure la gestion des signaux externes
    */
   setupSignalHandlers() {
-    process.on('SIGINT', () => {
-      this.logger.info('✋ Signal SIGINT reçu - Arrêt demandé');
-      this.cleanup();
-      process.exit(0);
-    });
-
-    process.on('SIGTERM', () => {
-      this.logger.info('✋ Signal SIGTERM reçu - Arrêt demandé');
-      this.cleanup();
-      process.exit(0);
-    });
-
-    process.on('uncaughtException', (error) => {
-      this.logger.error('Exception non gérée', { 
-        error: error.message,
-        stack: error.stack 
+    ['SIGINT','SIGTERM'].forEach(sig => {
+      process.on(sig, () => {
+        this.logger.info(`✋ ${sig} reçu - arrêt`);
+        this.cleanup();
+        process.exit(0);
       });
+    });
+    process.on('uncaughtException', err => {
+      this.logger.error('Exception non gérée', { message: err.message, stack: err.stack });
       this.cleanup();
       process.exit(1);
     });
-
-    process.on('unhandledRejection', (reason, promise) => {
-      this.logger.error('Promesse rejetée non gérée', { 
-        reason: reason,
-        promise: promise 
-      });
+    process.on('unhandledRejection', (reason) => {
+      this.logger.error('Promesse rejetée non gérée', { reason });
     });
   }
 
   /**
-   * Obtient les statistiques du système
+   * Renvoie les statistiques du système et des processus
    */
   getSystemStats() {
-    const stats = {
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      processes: {}
-    };
-    
-    Object.entries(this.processes).forEach(([name, process]) => {
-      stats.processes[name] = {
-        running: !!process,
-        pid: process ? process.pid : null
-      };
+    const stats = { uptime: process.uptime(), memory: process.memoryUsage(), processes: {} };
+    Object.entries(this.processes).forEach(([name, proc]) => {
+      stats.processes[name] = { running: !!proc, pid: proc ? proc.pid : null };
     });
-    
     return stats;
   }
 }
@@ -395,36 +275,28 @@ async function main() {
   console.log(chalk.cyan('║        Bot Conversationnel - Lola      ║'));
   console.log(chalk.cyan('╚════════════════════════════════════════╝'));
   console.log();
-  
+
   const orchestrator = new Orchestrator();
-  
-  // Configure les gestionnaires de signaux
   orchestrator.setupSignalHandlers();
-  
-  // Log le démarrage du système
   orchestrator.logger.info('Démarrage du système de bot conversationnel', {
     platform: process.platform,
     nodeVersion: process.version,
     environment: process.env.NODE_ENV || 'development'
   });
-  
-  // Démarre les services
+
+  // Démarrer les services puis le bot
   await orchestrator.startServices();
-  
-  // Expose l'orchestrateur pour l'API
-  global.orchestrator = orchestrator;
-  
-  // Affiche les statistiques toutes les minutes
+  await orchestrator.startBot();
+
+  // Statistiques périodiques
   setInterval(() => {
-    const stats = orchestrator.getSystemStats();
-    orchestrator.logger.debug('Statistiques système', stats);
+    orchestrator.logger.debug('Statistiques système', orchestrator.getSystemStats());
   }, 60000);
 }
 
-// Démarre l'application
 if (require.main === module) {
-  main().catch(error => {
-    console.error(chalk.red('Erreur fatale:'), error);
+  main().catch(err => {
+    console.error(chalk.red('Erreur fatale:'), err);
     process.exit(1);
   });
 }
