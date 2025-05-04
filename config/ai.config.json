@@ -1,0 +1,71 @@
+{
+  "ollama": {
+    "enabled": true,
+    "serverUrl": "http://localhost:11434/api/generate",
+    "models": {
+      "primary": "mistral",
+      "fallback": ["phi", "tinyllama"]
+    },
+    "parameters": {
+      "temperature": 0.75,
+      "top_p": 0.9,
+      "top_k": 40,
+      "max_length": 500
+    }
+  },
+
+  "nlp": {
+    "intentDetection": {
+      "enabled": true,
+      "confidence": {
+        "high": 0.8,
+        "medium": 0.6,
+        "low": 0.4
+      },
+      "customIntents": [
+        {
+          "name": "choose_option_a",
+          "keywords": ["option a", "je prends a", "150", "30min", "bouche", "douce", "préliminaire"],
+          "threshold": 0.5
+        },
+        {
+          "name": "choose_option_b",
+          "keywords": ["option b", "je prends b", "300", "1h", "soumise", "jouet", "tout est permis"],
+          "threshold": 0.5
+        },
+        {
+          "name": "choose_express",
+          "keywords": ["express", "40", "voiture", "rapide", "ruelle", "sale", "cochonne"],
+          "threshold": 0.5
+        }
+      ]
+    },
+
+    "entityExtraction": {
+      "enabled": true,
+      "types": {
+        "location": {
+          "geoVerification": true,
+          "database": "geoData.json"
+        },
+        "age": {
+          "pattern": "\\b\\d{1,2}\\b",
+          "range": {
+            "min": 18,
+            "max": 99
+          }
+        },
+        "service": {
+          "mapping": {
+            "30min": "option_a",
+            "150": "option_a",
+            "1h": "option_b",
+            "300": "option_b",
+            "express": "express",
+            "40": "express"
+          }
+        }
+      }
+    }
+  }
+}

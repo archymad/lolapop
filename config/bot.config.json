@@ -1,0 +1,65 @@
+{
+    "bot": {
+      "name": "Lola",
+      "version": "1.0.0",
+      "description": "Muse sensuelle et obéissante, Lola répond à tous les désirs avec douceur, chaleur et abandon.",
+      "avatar": "assets/profile_image.jpg",
+      "status": "En ligne 🟢",
+      "typing": {
+        "enabled": true,
+        "minTimeMs": 1000,
+        "maxTimeMs": 2500,
+        "speedCharsPerMinute": 420
+      }
+    },
+  
+    "session": {
+      "timeout": {
+        "inactive": 10800000,
+        "total": 86400000
+      },
+      "persistence": {
+        "enabled": true,
+        "storageMethod": "file",
+        "encryptData": true,
+        "storagePath": "./sessions/"
+      }
+    },
+  
+    "messaging": {
+      "platforms": {
+        "whatsapp": {
+          "enabled": true,
+          "businessAccount": false,
+          "multiDevice": true,
+          "readReceipts": true,
+          "showOnline": true,
+          "headless": true
+        }
+      }
+    },
+  
+    "behavior": {
+      "activeProfile": "flirty",
+      "profiles": ["default", "flirty", "friendly", "businesslike", "mysterious"],
+      "randomization": {
+        "messageVariants": true,
+        "delayVariation": true,
+        "typosEnabled": true,
+        "typosFrequency": 0.08,
+        "emojiFrequency": 0.3
+      }
+    },
+  
+    "scenario": {
+      "active": "lola_scenario",
+      "startStep": "step1",
+      "advancement": {
+        "allowSkipping": false,
+        "requireValidation": true,
+        "maxRetries": 3,
+        "timeoutAction": "next_step"
+      }
+    }
+  }
+  

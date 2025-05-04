@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration Bot Conversationnel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .json-editor { 
+      height: 400px; 
+      width: 100%;
+      font-family: monospace;
+    }
+    .nav-tabs {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container my-4">
+    <h1>Administration Bot Conversationnel</h1>
+    
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            Configuration Active
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="activeProfile" class="form-label">Profil actif</label>
+              <select id="activeProfile" class="form-select"></select>
+            </div>
+            <div class="mb-3">
+              <label for="activeScenario" class="form-label">Scénario actif</label>
+              <select id="activeScenario" class="form-select"></select>
+            </div>
+            <button id="saveActiveConfig" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-info text-white">
+            Actions
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <button id="restartBot" class="btn btn-warning">Redémarrer le Bot</button>
+              <button id="resetConfig" class="btn btn-danger">Réinitialiser les Configurations</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <ul class="nav nav-tabs" id="configTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="bot-tab" data-bs-toggle="tab" data-bs-target="#bot" type="button" role="tab">Bot</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="personality-tab" data-bs-toggle="tab" data-bs-target="#personality" type="button" role="tab">Personnalité</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="scenario-tab" data-bs-toggle="tab" data-bs-target="#scenario" type="button" role="tab">Scénario</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai" type="button" role="tab">IA</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="media-tab" data-bs-toggle="tab" data-bs-target="#media" type="button" role="tab">Médias</button>
+      </li>
+    </ul>
+    
+    <div class="tab-content" id="configTabContent">
+      <div class="tab-pane fade show active" id="bot" role="tabpanel">
+        <textarea id="botConfig" class="json-editor"></textarea>
+        <button id="saveBotConfig" class="btn btn-success mt-2">Enregistrer</button>
+      </div>
+      <div class="tab-pane fade" id="personality" role="tabpanel">
+        <textarea id="personalityConfig" class="json-editor"></textarea>
+        <button id="savePersonalityConfig" class="btn btn-success mt-2">Enregistrer</button>
+      </div>
+      <div class="tab-pane fade" id="scenario" role="tabpanel">
+        <textarea id="scenarioConfig" class="json-editor"></textarea>
+        <button id="saveScenarioConfig" class="btn btn-success mt-2">Enregistrer</button>
+      </div>
+      <div class="tab-pane fade" id="ai" role="tabpanel">
+        <textarea id="aiConfig" class="json-editor"></textarea>
+        <button id="saveAiConfig" class="btn btn-success mt-2">Enregistrer</button>
+      </div>
+      <div class="tab-pane fade" id="media" role="tabpanel">
+        <textarea id="mediaConfig" class="json-editor"></textarea>
+        <button id="saveMediaConfig" class="btn btn-success mt-2">Enregistrer</button>
+      </div>
+    </div>
+    
+    <div id="notification" class="alert mt-3" style="display: none;"></div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Charger les configurations
+      loadAllConfigs();
+      loadActiveConfig();
+      loadProfilesAndScenarios();
+      
+      // Événements de sauvegarde
+      document.getElementById('saveBotConfig').addEventListener('click', () => saveConfig('bot'));
+      document.getElementById('savePersonalityConfig').addEventListener('click', () => saveConfig('personality'));
+      document.getElementById('saveScenarioConfig').addEventListener('click', () => saveConfig('scenario'));
+      document.getElementById('saveAiConfig').addEventListener('click', () => saveConfig('ai'));
+      document.getElementById('saveMediaConfig').addEventListener('click', () => saveConfig('media'));
+      document.getElementById('saveActiveConfig').addEventListener('click', saveActiveConfig);
+      
+      // Fonctions d'administration
+      document.getElementById('restartBot').addEventListener('click', restartBot);
+      document.getElementById('resetConfig').addEventListener('click', resetConfig);
+    });
+    
+    async function loadAllConfigs() {
+      try {
+        const response = await fetch('/api/config');
+        const configs = await response.json();
+        
+        for (const [key, config] of Object.entries(configs)) {
+          const textarea = document.getElementById(`${key}Config`);
+          if (textarea) {
+            textarea.value = JSON.stringify(config, null, 2);
+          }
+        }
+      } catch (error) {
+        showNotification('Erreur lors du chargement des configurations', 'danger');
+      }
+    }
+    
+    async function loadActiveConfig() {
+      try {
+        const response = await fetch('/api/active-config');
+        const { activeProfile, activeScenario } = await response.json();
+        
+        document.getElementById('activeProfile').value = activeProfile;
+        document.getElementById('activeScenario').value = activeScenario;
+      } catch (error) {
+        showNotification('Erreur lors du chargement de la configuration active', 'danger');
+      }
+    }
+    
+    async function loadProfilesAndScenarios() {
+      try {
+        // Charger les profils
+        const profilesResponse = await fetch('/api/profiles');
+        const { profiles } = await profilesResponse.json();
+        
+        const profileSelect = document.getElementById('activeProfile');
+        profileSelect.innerHTML = '';
+        
+        profiles.forEach(profile => {
+          const option = document.createElement('option');
+          option.value = profile;
+          option.textContent = profile;
+          profileSelect.appendChild(option);
+        });
+        
+        // Charger les scénarios
+        const scenariosResponse = await fetch('/api/scenarios');
+        const { scenarios } = await scenariosResponse.json();
+        
+        const scenarioSelect = document.getElementById('activeScenario');
+        scenarioSelect.innerHTML = '';
+        
+        scenarios.forEach(scenario => {
+          const option = document.createElement('option');
+          option.value = scenario;
+          option.textContent = scenario;
+          scenarioSelect.appendChild(option);
+        });
+        
+        // Charger la configuration active
+        await loadActiveConfig();
+      } catch (error) {
+        showNotification('Erreur lors du chargement des profils et scénarios', 'danger');
+      }
+    }
+    
+    async function saveConfig(key) {
+      try {
+        const textarea = document.getElementById(`${key}Config`);
+        const config = JSON.parse(textarea.value);
+        
+        const response = await fetch(`/api/config/${key}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(config)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification(`Configuration ${key} enregistrée avec succès`, 'success');
+        } else {
+          showNotification(`Erreur: ${result.error}`, 'danger');
+        }
+      } catch (error) {
+        showNotification(`Erreur lors de l'enregistrement: ${error.message}`, 'danger');
+      }
+    }
+    
+    async function saveActiveConfig() {
+      try {
+        const activeConfig = {
+          activeProfile: document.getElementById('activeProfile').value,
+          activeScenario: document.getElementById('activeScenario').value
+        };
+        
+        const response = await fetch('/api/active-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(activeConfig)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showNotification('Configuration active mise à jour', 'success');
+        } else {
+          showNotification(`Erreur: ${result.error}`, 'danger');
+        }
+      } catch (error) {
+        showNotification(`Erreur: ${error.message}`, 'danger');
+      }
+    }
+    
+    function restartBot() {
+      // Cette fonction serait à implémenter côté serveur
+      showNotification('Fonctionnalité en cours de développement', 'info');
+    }
+    
+    function resetConfig() {
+      if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les configurations ?')) {
+        // Cette fonction serait à implémenter côté serveur
+        showNotification('Fonctionnalité en cours de développement', 'info');
+      }
+    }
+    
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.className = `alert alert-${type} mt-3`;
+      notification.style.display = 'block';
+      
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

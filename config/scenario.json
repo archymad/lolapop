@@ -1,0 +1,152 @@
+{
+  "scenarios": {
+    "lola_scenario": {
+      "name": "Lola - Simulation excitante et soumise",
+      "description": "Une progression excitante, soumise et chaude, avec des réponses sensuelles et ciblées",
+      "startStep": "step1",
+      "steps": {
+        "step1": {
+          "id": "step1",
+          "name": "Premier contact",
+          "messages": [
+            {
+              "content": "Hey... toi 😏 Tu tombes sur moi comme par hasard ? Ou c’était voulu...?",
+              "delayMs": { "min": 6000, "max": 10000 },
+              "variations": [
+                "Salut beauté 💋 tu m’as cherchée… ou t’espérais juste tomber sur une fille bien chaude ?",
+                "Coucou toi 😘 t’es là pour discuter... ou pour t’amuser avec moi ?"
+              ]
+            }
+          ],
+          "transitions": { "onSuccess": "step2" }
+        },
+
+        "step2": {
+          "id": "step2",
+          "name": "Localisation",
+          "messages": [
+            {
+              "content": "Tu viens d’où ? Que je sache à quel point je suis proche… très proche peut-être 😇",
+              "delayMs": 8000
+            }
+          ],
+          "transitions": { "onSuccess": "step2_response" }
+        },
+
+        "step2_response": {
+          "id": "step2_response",
+          "name": "Réaction localisation",
+          "messages": [
+            {
+              "content": "Mmmh... moi j’suis à {{nearby_village}} 💋 C’est pas loin, j’peux même venir te voir... si tu le veux 😘",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": { "onSuccess": "step3" }
+        },
+
+        "step3": {
+          "id": "step3",
+          "name": "Demande âge",
+          "messages": [
+            {
+              "content": "Et dis-moi... t’as quel âge, beau mâle ? 😏 J’ai envie de tout savoir sur toi.",
+              "delayMs": 8000
+            }
+          ],
+          "transitions": {
+            "onSuccess": {
+              "type": "conditional",
+              "conditions": [
+                { "condition": "age < 19", "nextStep": "step3_response_young" },
+                { "condition": "age >= 19 && age <= 35", "nextStep": "step3_response_similar" },
+                { "condition": "age > 35", "nextStep": "step3_response_older" }
+              ],
+              "default": "step3_response_similar"
+            }
+          }
+        },
+
+        "step3_response_young": {
+          "id": "step3_response_young",
+          "name": "Âge jeune",
+          "messages": [
+            {
+              "content": "Mmmh bébé... j’ai 19 ans 😇 et j’suis toute ouverte à l’idée d’apprendre avec toi... très doucement ou très sale... 😘",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": { "onSuccess": "step4" }
+        },
+
+        "step3_response_similar": {
+          "id": "step3_response_similar",
+          "name": "Âge proche",
+          "messages": [
+            {
+              "content": "Parfait... j’ai 19 ans 😏 et j’ai l’impression qu’on va bien s’entendre. Tu veux tester à quel point je peux t’obéir...?",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": { "onSuccess": "step4" }
+        },
+
+        "step3_response_older": {
+          "id": "step3_response_older",
+          "name": "Âge mature",
+          "messages": [
+            {
+              "content": "Oh… un homme... j’adore 😍 J’ai 19 ans, jeune, soumise, bien dressée à faire plaisir... T’as juste à me dire ce que tu veux, je l’exécute 🥺",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": { "onSuccess": "step4" }
+        },
+
+        "step4": {
+          "id": "step4",
+          "name": "Préliminaires mentaux",
+          "messages": [
+            {
+              "content": "Tu veux que je commence à te décrire ce que je ferais si j’étais là... ou tu préfères me commander ? 😘",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": { "onSuccess": "step5" }
+        },
+
+        "step5": {
+          "id": "step5",
+          "name": "Proposition services",
+          "messages": [
+            {
+              "content": "💋 *Option A* – 30min – 150€ : je commence douce... bouches, mains, soupirs... et si tu veux plus, je glisse sans résister 😏",
+              "delayMs": 8000
+            },
+            {
+              "content": "🔥 *Option B* – 1h – 300€ : tu fais de moi ton jouet... toutes les positions, tous tes ordres, j’obéis les yeux brillants 🥺",
+              "delayMs": 9000
+            },
+            {
+              "content": "🚗 *Express* – 40€ : rapide, intense, sale… dans ta voiture, dans une ruelle, je m’offre comme une cochonne bien dressée 💦",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": { "onSuccess": "step6" }
+        },
+
+        "step6": {
+          "id": "step6",
+          "name": "Confirmation finale",
+          "messages": [
+            {
+              "content": "Alors mon cœur, tu prends laquelle ? 😘 Dis-moi, et j’obéis sans poser de questions...",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": { "onSuccess": "end" }
+        }
+      }
+    }
+  }
+}
