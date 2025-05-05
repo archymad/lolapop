@@ -1,0 +1,101 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "scenarios": {
+        "type": "object",
+        "patternProperties": {
+          ".*": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "startStep": { "type": "string" },
+              "steps": {
+                "type": "object",
+                "patternProperties": {
+                  ".*": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "name": { "type": "string" },
+                      "messages": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "content": { "type": "string" },
+                            "delayMs": {
+                              "oneOf": [
+                                { "type": "integer" },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": { "type": "integer" },
+                                    "max": { "type": "integer" }
+                                  },
+                                  "required": ["min", "max"]
+                                }
+                              ]
+                            },
+                            "variations": {
+                              "type": "array",
+                              "items": { "type": "string" }
+                            }
+                          },
+                          "required": ["content"]
+                        }
+                      },
+                      "transitions": {
+                        "type": "object",
+                        "properties": {
+                          "onSuccess": {
+                            "oneOf": [
+                              { "type": "string" },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": { "type": "string" },
+                                  "nextStep": { "type": "string" },
+                                  "fallback": { "type": "string" },
+                                  "conditions": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "condition": { "type": "string" },
+                                        "nextStep": { "type": "string" }
+                                      },
+                                      "required": ["condition", "nextStep"]
+                                    }
+                                  },
+                                  "expectedPlatforms": {
+                                    "type": "array",
+                                    "items": { "type": "string" }
+                                  },
+                                  "keywords": {
+                                    "type": "array",
+                                    "items": { "type": "string" }
+                                  }
+                                },
+                                "required": ["type"]
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["onSuccess"]
+                      }
+                    },
+                    "required": ["id", "name", "messages", "transitions"]
+                  }
+                }
+              }
+            },
+            "required": ["name", "description", "startStep", "steps"]
+          }
+        }
+      }
+    },
+    "required": ["scenarios"]
+  }
+  

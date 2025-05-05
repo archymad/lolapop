@@ -1,3 +1,94 @@
 {
-    "Mulhouse": ["Lutterbach", "Brunstatt", "Dornach", "Pfastatt", "Riedisheim"]
+  "locations": {
+    "Mulhouse": {
+      "villages": ["Lutterbach", "Brunstatt", "Dornach", "Illzach", "Riedisheim", "Pfastatt", "Wittenheim", "Kingersheim"]
+    },
+    "Strasbourg": {
+      "villages": ["Schiltigheim", "Illkirch", "Lingolsheim", "Hoenheim", "Bischheim", "Ostwald", "Eckbolsheim", "Wolfisheim"]
+    },
+    "Paris": {
+      "villages": ["Saint-Denis", "Clichy", "Levallois-Perret", "Boulogne-Billancourt", "Montreuil", "Neuilly-sur-Seine", "Vincennes", "Pantin"]
+    },
+    "Lyon": {
+      "villages": ["Villeurbanne", "Bron", "Vénissieux", "Caluire-et-Cuire", "Saint-Priest", "Vaulx-en-Velin", "Écully", "Tassin-la-Demi-Lune"]
+    },
+    "Marseille": {
+      "villages": ["Aubagne", "Allauch", "Plan-de-Cuques", "Cassis", "La Ciotat", "Marignane", "Vitrolles", "Les Pennes-Mirabeau"]
+    },
+    "Toulouse": {
+      "villages": ["Blagnac", "Colomiers", "Tournefeuille", "Balma", "Ramonville-Saint-Agne", "L'Union", "Cugnaux", "Plaisance-du-Touch"]
+    },
+    "Bordeaux": {
+      "villages": ["Pessac", "Mérignac", "Talence", "Bègles", "Villenave-d'Ornon", "Le Bouscat", "Bruges", "Cenon"]
+    },
+    "Lille": {
+      "villages": ["Roubaix", "Tourcoing", "Villeneuve-d'Ascq", "Lambersart", "Marcq-en-Barœul", "La Madeleine", "Croix", "Mons-en-Barœul"]
+    },
+    "Nantes": {
+      "villages": ["Rezé", "Saint-Herblain", "Orvault", "Saint-Sébastien-sur-Loire", "Vertou", "Carquefou", "La Chapelle-sur-Erdre", "Sainte-Luce-sur-Loire"]
+    },
+    "Nice": {
+      "villages": ["Cagnes-sur-Mer", "Saint-Laurent-du-Var", "La Trinité", "Villefranche-sur-Mer", "Beaulieu-sur-Mer", "Èze", "Cap-d'Ail", "Vence"]
+    },
+    "Montpellier": {
+      "villages": ["Lattes", "Castelnau-le-Lez", "Juvignac", "Pérols", "Saint-Jean-de-Védas", "Grabels", "Mauguio", "Le Crès"]
+    },
+    "Rennes": {
+      "villages": ["Cesson-Sévigné", "Bruz", "Chantepie", "Saint-Grégoire", "Pacé", "Betton", "Acigné", "Chartres-de-Bretagne"]
+    },
+    "Grenoble": {
+      "villages": ["Saint-Martin-d'Hères", "Échirolles", "Fontaine", "Meylan", "Seyssinet-Pariset", "Saint-Égrève", "Sassenage", "Crolles"]
+    },
+    "Dijon": {
+      "villages": ["Chenôve", "Talant", "Chevigny-Saint-Sauveur", "Quetigny", "Fontaine-lès-Dijon", "Saint-Apollinaire", "Marsannay-la-Côte", "Longvic"]
+    },
+    "Brest": {
+      "villages": ["Plouzané", "Guipavas", "Gouesnou", "Bohars", "Guilers", "Plougastel-Daoulas", "Le Relecq-Kerhuon", "Landerneau"]
+    },
+    "Cannes": {
+      "villages": ["Le Cannet", "Mougins", "Mandelieu-la-Napoule", "Vallauris", "Théoule-sur-Mer", "Mouans-Sartoux", "La Roquette-sur-Siagne", "Pégomas"]
+    },
+    "Annecy": {
+      "villages": ["Seynod", "Cran-Gevrier", "Meythet", "Annecy-le-Vieux", "Pringy", "Argonay", "Epagny", "Poisy"]
+    },
+    "Metz": {
+      "villages": ["Montigny-lès-Metz", "Woippy", "Ban-Saint-Martin", "Longeville-lès-Metz", "Saint-Julien-lès-Metz", "Moulins-lès-Metz", "Ars-Laquenexy", "Scy-Chazelles"]
+    },
+    "Reims": {
+      "villages": ["Tinqueux", "Cormontreuil", "Bétheny", "Saint-Brice-Courcelles", "Bezannes", "Taissy", "Champfleury", "Villers-aux-Nœuds"]
+    },
+    "Colmar": {
+      "villages": ["Wintzenheim", "Ingersheim", "Turckheim", "Horbourg-Wihr", "Houssen", "Wettolsheim", "Eguisheim", "Sainte-Croix-en-Plaine"]
+    },
+    "Nancy": {
+      "villages": ["Villers-lès-Nancy", "Laxou", "Jarville-la-Malgrange", "Maxéville", "Essey-lès-Nancy", "Tomblaine", "Houdemont", "Malzéville"]
+    },
+    "Tours": {
+      "villages": ["Joué-lès-Tours", "Saint-Cyr-sur-Loire", "La Riche", "Saint-Pierre-des-Corps", "Chambray-lès-Tours", "Fondettes", "Ballan-Miré", "Saint-Avertin"]
+    },
+    "Clermont-Ferrand": {
+      "villages": ["Chamalières", "Beaumont", "Cébazat", "Aubière", "Gerzat", "Lempdes", "Royat", "Durtol"]
+    },
+    "Avignon": {
+      "villages": ["Le Pontet", "Les Angles", "Sorgues", "Villeneuve-lès-Avignon", "Morières-lès-Avignon", "Rognonas", "Châteaurenard", "Barbentane"]
+    },
+    "Perpignan": {
+      "villages": ["Canet-en-Roussillon", "Saint-Estève", "Cabestany", "Bompas", "Toulouges", "Pia", "Le Soler", "Baho"]
+    },
+    "Saint-Étienne": {
+      "villages": ["La Ricamarie", "Le Chambon-Feugerolles", "Saint-Jean-Bonnefonds", "Saint-Priest-en-Jarez", "Villars", "Firminy", "Roche-la-Molière", "Sorbiers"]
+    },
+    "Nîmes": {
+      "villages": ["Marguerittes", "Milhaud", "Caissargues", "Bouillargues", "Rodilhan", "Générac", "Garons", "Manduel"]
+    },
+    "Le Havre": {
+      "villages": ["Montivilliers", "Harfleur", "Gonfreville-l'Orcher", "Sainte-Adresse", "Octeville-sur-Mer", "Fontaine-la-Mallet", "Gainneville", "Rogerville"]
+    },
+    "Amiens": {
+      "villages": ["Longueau", "Rivery", "Camon", "Salouël", "Dury", "Cagny", "Pont-de-Metz", "Saleux"]
+    },
+    "Angers": {
+      "villages": ["Avrillé", "Trélazé", "Saint-Barthélemy-d'Anjou", "Les Ponts-de-Cé", "Bouchemaine", "Beaucouzé", "Écouflant", "Mûrs-Erigné"]
+    }
   }
+}

@@ -3,9 +3,9 @@
  */
 
 class ScenarioManager {
-    constructor(scenarioConfig, activeScenario) {
+  constructor(scenarioConfig, activeScenario) {
       this.config = scenarioConfig;
-      this.activeScenario = activeScenario || 'lola_scenario';
+      this.activeScenario = activeScenario || this.getDefaultScenario();
       
       // Charger le scénario actif
       this.scenario = this.config.scenarios[this.activeScenario];
@@ -19,6 +19,20 @@ class ScenarioManager {
           throw new Error('Aucun scénario disponible');
         }
       }
+    }
+    
+    /**
+     * Obtient le scénario par défaut à partir de la configuration
+     */
+    getDefaultScenario() {
+      // Chercher le premier scénario disponible
+      const scenarios = Object.keys(this.config.scenarios);
+      // Si acompte_conversion_lola existe, on le priorise
+      if (scenarios.includes('acompte_conversion_lola')) {
+        return 'acompte_conversion_lola';
+      }
+      // Sinon on prend le premier
+      return scenarios.length > 0 ? scenarios[0] : null;
     }
     
     /**

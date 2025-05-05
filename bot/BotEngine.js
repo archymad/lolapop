@@ -198,9 +198,12 @@ class BotEngine {
       // Obtenir ou créer une session
       let session = this.sessionManager.getSession(chatId);
       if (!session) {
-        session = this.sessionManager.createSession(chatId);
+        // Obtenir l'étape initiale du scénario actif
+        const initialStep = this.scenarioManager.getInitialStep();
+        session = this.sessionManager.createSession(chatId, initialStep);
         this.logger.info('Nouvelle session créée', {
           chatId: chatId.split('@')[0],
+          initialStep: initialStep,
           totalSessions: this.sessionManager.getActiveSessions().size
         });
       }

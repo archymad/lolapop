@@ -7,10 +7,20 @@
         "captions": [
           "Tu aimes ce que tu vois ? 💋",
           "C’est moi… et c’est pour toi 😏",
+          "Juste un petit avant-goût… tu veux la suite ? 😘",
+          "Tu aimes ce que tu vois ? 💋",
+          "C’est moi… et c’est pour toi 😏",
+          "Juste un petit avant-goût… tu veux la suite ? 😘",
+          "Tu aimes ce que tu vois ? 💋",
+          "C’est moi… et c’est pour toi 😏",
           "Juste un petit avant-goût… tu veux la suite ? 😘"
         ],
         "sendTiming": {
-          "afterSteps": ["step5"],
+          "afterSteps": [
+            "step5",
+            "step5",
+            "step5"
+          ],
           "delayMs": 10000
         }
       },
@@ -19,10 +29,20 @@
         "captions": [
           "T’as encore rien vu 😇",
           "Je peux en montrer plus… si tu le veux vraiment 😍",
+          "Je suis là, pour toi, entièrement…",
+          "T’as encore rien vu 🙇",
+          "Je peux en montrer plus… si tu le veux vraiment 😍",
+          "Je suis là, pour toi, entièrement…",
+          "T’as encore rien vu 🙇",
+          "Je peux en montrer plus… si tu le veux vraiment 😍",
           "Je suis là, pour toi, entièrement…"
         ],
         "sendTiming": {
-          "afterSteps": ["step6"],
+          "afterSteps": [
+            "step6",
+            "step6",
+            "step6"
+          ],
           "delayMs": 15000
         }
       },
@@ -31,20 +51,47 @@
         "captions": [
           "Tu vois, c’est bien moi 😘",
           "La preuve en image 💋",
-          "Juste pour que tu sois rassuré 😇"
+          "Juste pour que tu sois rassuré 😇",
+          "Tu vois, c’est bien moi 😘",
+          "La preuve en image 💋",
+          "Juste pour que tu sois rassuré 🙇",
+          "Tu vois, c’est bien moi 😘",
+          "La preuve en image 💋",
+          "Juste pour que tu sois rassuré 🙇"
         ],
         "sendTiming": {
           "onRequest": true,
-          "keywords": ["preuve", "photo", "vraie", "montre", "toi"]
+          "keywords": [
+            "preuve",
+            "photo",
+            "vraie",
+            "montre",
+            "toi",
+            "preuve",
+            "photo",
+            "vraie",
+            "montre",
+            "toi",
+            "preuve",
+            "photo",
+            "vraie",
+            "montre",
+            "toi"
+          ]
         }
       }
     }
   },
-
   "stickers": {
     "enabled": true,
     "sets": {
       "flirty": [
+        "assets/stickers/kiss.webp",
+        "assets/stickers/wink.webp",
+        "assets/stickers/heart.webp",
+        "assets/stickers/kiss.webp",
+        "assets/stickers/wink.webp",
+        "assets/stickers/heart.webp",
         "assets/stickers/kiss.webp",
         "assets/stickers/wink.webp",
         "assets/stickers/heart.webp"

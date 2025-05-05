@@ -1,0 +1,11 @@
+{
+    "locations": {
+      "Mulhouse": {
+        "villages": ["Lutterbach", "Brunstatt", "Dornach"]
+      },
+      "Strasbourg": {
+        "villages": ["Schiltigheim", "Illkirch", "Ostwald"]
+      }
+    }
+  }
+  

@@ -1,0 +1,117 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "bot": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "version": { "type": "string" },
+          "description": { "type": "string" },
+          "avatar": { "type": "string" },
+          "status": { "type": "string" },
+          "typing": {
+            "type": "object",
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "minTimeMs": { "type": "integer" },
+              "maxTimeMs": { "type": "integer" },
+              "speedCharsPerMinute": { "type": "integer" }
+            },
+            "required": ["enabled", "minTimeMs", "maxTimeMs", "speedCharsPerMinute"]
+          }
+        },
+        "required": ["name", "version", "description", "avatar", "status", "typing"]
+      },
+      "session": {
+        "type": "object",
+        "properties": {
+          "timeout": {
+            "type": "object",
+            "properties": {
+              "inactive": { "type": "integer" },
+              "total": { "type": "integer" }
+            },
+            "required": ["inactive", "total"]
+          },
+          "persistence": {
+            "type": "object",
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "storageMethod": { "type": "string" },
+              "encryptData": { "type": "boolean" },
+              "storagePath": { "type": "string" }
+            },
+            "required": ["enabled", "storageMethod", "encryptData", "storagePath"]
+          }
+        },
+        "required": ["timeout", "persistence"]
+      },
+      "messaging": {
+        "type": "object",
+        "properties": {
+          "platforms": {
+            "type": "object",
+            "properties": {
+              "whatsapp": {
+                "type": "object",
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "businessAccount": { "type": "boolean" },
+                  "multiDevice": { "type": "boolean" },
+                  "readReceipts": { "type": "boolean" },
+                  "showOnline": { "type": "boolean" },
+                  "headless": { "type": "boolean" }
+                },
+                "required": ["enabled", "businessAccount", "multiDevice", "readReceipts", "showOnline", "headless"]
+              }
+            },
+            "required": ["whatsapp"]
+          }
+        },
+        "required": ["platforms"]
+      },
+      "behavior": {
+        "type": "object",
+        "properties": {
+          "activeProfile": { "type": "string" },
+          "profiles": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "randomization": {
+            "type": "object",
+            "properties": {
+              "messageVariants": { "type": "boolean" },
+              "delayVariation": { "type": "boolean" },
+              "typosEnabled": { "type": "boolean" },
+              "typosFrequency": { "type": "number" },
+              "emojiFrequency": { "type": "number" }
+            },
+            "required": ["messageVariants", "delayVariation", "typosEnabled", "typosFrequency", "emojiFrequency"]
+          }
+        },
+        "required": ["activeProfile", "profiles", "randomization"]
+      },
+      "scenario": {
+        "type": "object",
+        "properties": {
+          "active": { "type": "string" },
+          "startStep": { "type": "string" },
+          "advancement": {
+            "type": "object",
+            "properties": {
+              "allowSkipping": { "type": "boolean" },
+              "requireValidation": { "type": "boolean" },
+              "maxRetries": { "type": "integer" },
+              "timeoutAction": { "type": "string" }
+            },
+            "required": ["allowSkipping", "requireValidation", "maxRetries", "timeoutAction"]
+          }
+        },
+        "required": ["active", "startStep", "advancement"]
+      }
+    },
+    "required": ["bot", "session", "messaging", "behavior", "scenario"]
+  }
+  

@@ -4,7 +4,12 @@
     "serverUrl": "http://localhost:11434/api/generate",
     "models": {
       "primary": "mistral",
-      "fallback": ["phi", "tinyllama"]
+      "fallback": [
+        "phi",
+        "tinyllama",
+        "phi",
+        "tinyllama"
+      ]
     },
     "parameters": {
       "temperature": 0.75,
@@ -13,7 +18,6 @@
       "max_length": 500
     }
   },
-
   "nlp": {
     "intentDetection": {
       "enabled": true,
@@ -25,22 +29,71 @@
       "customIntents": [
         {
           "name": "choose_option_a",
-          "keywords": ["option a", "je prends a", "150", "30min", "bouche", "douce", "préliminaire"],
+          "keywords": [
+            "option a",
+            "je prends a",
+            "150",
+            "30min",
+            "bouche",
+            "douce",
+            "préliminaire"
+          ],
           "threshold": 0.5
         },
         {
           "name": "choose_option_b",
-          "keywords": ["option b", "je prends b", "300", "1h", "soumise", "jouet", "tout est permis"],
+          "keywords": [
+            "option b",
+            "je prends b",
+            "300",
+            "1h",
+            "soumise",
+            "jouet",
+            "tout est permis"
+          ],
           "threshold": 0.5
         },
         {
           "name": "choose_express",
-          "keywords": ["express", "40", "voiture", "rapide", "ruelle", "sale", "cochonne"],
+          "keywords": [
+            "express",
+            "40",
+            "voiture",
+            "rapide",
+            "ruelle",
+            "sale",
+            "cochonne"
+          ],
           "threshold": 0.5
+        },
+        {
+          "name": "sexual_intent",
+          "keywords": [
+            "baiser",
+            "baise",
+            "pipe",
+            "sucer",
+            "lécher",
+            "doigter",
+            "position",
+            "me démonter",
+            "gicler"
+          ],
+          "threshold": 0.4
+        },
+        {
+          "name": "refusal_detected",
+          "keywords": [
+            "pas intéressé",
+            "laisse tomber",
+            "non merci",
+            "j’ai pas le temps",
+            "pas dispo"
+          ],
+          "threshold": 0.4
         }
       ]
     },
-
     "entityExtraction": {
       "enabled": true,
       "types": {
@@ -57,12 +110,14 @@
         },
         "service": {
           "mapping": {
-            "30min": "option_a",
+            "40": "express",
+            "50": "express",
+            "70": "express",
             "150": "option_a",
-            "1h": "option_b",
             "300": "option_b",
-            "express": "express",
-            "40": "express"
+            "30min": "option_a",
+            "1h": "option_b",
+            "express": "express"
           }
         }
       }

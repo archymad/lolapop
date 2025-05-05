@@ -1,0 +1,120 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ollama": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "serverUrl": { "type": "string", "format": "uri" },
+          "models": {
+            "type": "object",
+            "properties": {
+              "primary": { "type": "string" },
+              "fallback": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["primary", "fallback"]
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "temperature": { "type": "number" },
+              "top_p": { "type": "number" },
+              "top_k": { "type": "integer" },
+              "max_length": { "type": "integer" }
+            },
+            "required": ["temperature", "top_p", "top_k", "max_length"]
+          }
+        },
+        "required": ["enabled", "serverUrl", "models", "parameters"]
+      },
+      "nlp": {
+        "type": "object",
+        "properties": {
+          "intentDetection": {
+            "type": "object",
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "confidence": {
+                "type": "object",
+                "properties": {
+                  "high": { "type": "number" },
+                  "medium": { "type": "number" },
+                  "low": { "type": "number" }
+                },
+                "required": ["high", "medium", "low"]
+              },
+              "customIntents": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "keywords": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "threshold": { "type": "number" }
+                  },
+                  "required": ["name", "keywords", "threshold"]
+                }
+              }
+            },
+            "required": ["enabled", "confidence", "customIntents"]
+          },
+          "entityExtraction": {
+            "type": "object",
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "types": {
+                "type": "object",
+                "properties": {
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "geoVerification": { "type": "boolean" },
+                      "database": { "type": "string" }
+                    },
+                    "required": ["geoVerification", "database"]
+                  },
+                  "age": {
+                    "type": "object",
+                    "properties": {
+                      "pattern": { "type": "string" },
+                      "range": {
+                        "type": "object",
+                        "properties": {
+                          "min": { "type": "integer" },
+                          "max": { "type": "integer" }
+                        },
+                        "required": ["min", "max"]
+                      }
+                    },
+                    "required": ["pattern", "range"]
+                  },
+                  "service": {
+                    "type": "object",
+                    "properties": {
+                      "mapping": {
+                        "type": "object",
+                        "additionalProperties": { "type": "string" }
+                      }
+                    },
+                    "required": ["mapping"]
+                  }
+                },
+                "required": ["location", "age", "service"]
+              }
+            },
+            "required": ["enabled", "types"]
+          }
+        },
+        "required": ["intentDetection", "entityExtraction"]
+      }
+    },
+    "required": ["ollama", "nlp"]
+  }
+  

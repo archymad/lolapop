@@ -86,29 +86,58 @@ function loadStepProcessor(configurator) {
           // Charger les données géographiques
           const geoConfig = configurator.getConfig('geo');
           
-          // Vérifier si la localisation est directement une clé
-          if (geoConfig[location] && geoConfig[location].length > 0) {
-            const villages = geoConfig[location];
-            return villages[Math.floor(Math.random() * villages.length)];
-          }
+          // Normaliser l'entrée
+          const normalizedLocation = location.toLowerCase().trim();
           
-          // Chercher si la localisation est un village référencé
-          for (const city in geoConfig) {
-            if (geoConfig[city].includes(location)) {
-              // Si c'est le cas, retourner un autre village de la même ville
-              const otherVillages = geoConfig[city].filter(v => v !== location);
-              if (otherVillages.length > 0) {
-                return otherVillages[Math.floor(Math.random() * otherVillages.length)];
+          // Liste des villes et villages connus
+          const locationsData = geoConfig.locations || {};
+          
+          // Vérifier si la localisation correspond à une ville connue (insensible à la casse)
+          for (const city in locationsData) {
+            if (city.toLowerCase() === normalizedLocation) {
+              // Si c'est une ville connue, choisir un village aléatoire
+              const villages = locationsData[city].villages || [];
+              if (villages.length > 0) {
+                return villages[Math.floor(Math.random() * villages.length)];
               }
             }
           }
           
-          // Fallback: retourner un village aléatoire
-          const allCities = Object.keys(geoConfig);
-          if (allCities.length > 0) {
-            const randomCity = allCities[Math.floor(Math.random() * allCities.length)];
-            const villages = geoConfig[randomCity];
-            return villages[Math.floor(Math.random() * villages.length)];
+          // Chercher si la localisation est un village référencé
+          for (const city in locationsData) {
+            const villages = locationsData[city].villages || [];
+            for (const village of villages) {
+              if (village.toLowerCase() === normalizedLocation) {
+                // C'est un village connu, retourner un autre village de la même ville
+                const otherVillages = villages.filter(v => v.toLowerCase() !== normalizedLocation);
+                if (otherVillages.length > 0) {
+                  return otherVillages[Math.floor(Math.random() * otherVillages.length)];
+                }
+                // Si pas d'autre village, retourner la ville
+                return city;
+              }
+            }
+          }
+          
+          // Si on arrive ici, c'est que la ville n'est pas connue.
+          // On va essayer de trouver une ville connue qui a été fournie précédemment
+          if (this.lastKnownCity) {
+            const lastCityData = locationsData[this.lastKnownCity];
+            if (lastCityData && lastCityData.villages && lastCityData.villages.length > 0) {
+              return lastCityData.villages[Math.floor(Math.random() * lastCityData.villages.length)];
+            }
+          }
+          
+          // Si on est arrivé à l'étape step_2_response, c'est que l'utilisateur a fourni une ville valide
+          // Dans ce cas, essayons de récupérer un village aléatoire d'une ville aléatoire
+          const cities = Object.keys(locationsData);
+          if (cities.length > 0) {
+            const randomCity = cities[Math.floor(Math.random() * cities.length)];
+            const villages = locationsData[randomCity].villages || [];
+            if (villages.length > 0) {
+              return villages[Math.floor(Math.random() * villages.length)];
+            }
+            return randomCity;
           }
         } catch (error) {
           console.error('Erreur lors de la recherche du village:', error);

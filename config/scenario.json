@@ -11,16 +11,20 @@
           "messages": [
             {
               "content": "Hey... toi 😏 Tu tombes sur moi comme par hasard ? Ou c’était voulu...?",
-              "delayMs": { "min": 6000, "max": 10000 },
+              "delayMs": {
+                "min": 6000,
+                "max": 10000
+              },
               "variations": [
                 "Salut beauté 💋 tu m’as cherchée… ou t’espérais juste tomber sur une fille bien chaude ?",
                 "Coucou toi 😘 t’es là pour discuter... ou pour t’amuser avec moi ?"
               ]
             }
           ],
-          "transitions": { "onSuccess": "step2" }
+          "transitions": {
+            "onSuccess": "step2"
+          }
         },
-
         "step2": {
           "id": "step2",
           "name": "Localisation",
@@ -30,9 +34,10 @@
               "delayMs": 8000
             }
           ],
-          "transitions": { "onSuccess": "step2_response" }
+          "transitions": {
+            "onSuccess": "step2_response"
+          }
         },
-
         "step2_response": {
           "id": "step2_response",
           "name": "Réaction localisation",
@@ -42,9 +47,10 @@
               "delayMs": 9000
             }
           ],
-          "transitions": { "onSuccess": "step3" }
+          "transitions": {
+            "onSuccess": "step3"
+          }
         },
-
         "step3": {
           "id": "step3",
           "name": "Demande âge",
@@ -58,15 +64,23 @@
             "onSuccess": {
               "type": "conditional",
               "conditions": [
-                { "condition": "age < 19", "nextStep": "step3_response_young" },
-                { "condition": "age >= 19 && age <= 35", "nextStep": "step3_response_similar" },
-                { "condition": "age > 35", "nextStep": "step3_response_older" }
+                {
+                  "condition": "age < 19",
+                  "nextStep": "step3_response_young"
+                },
+                {
+                  "condition": "age >= 19 && age <= 35",
+                  "nextStep": "step3_response_similar"
+                },
+                {
+                  "condition": "age > 35",
+                  "nextStep": "step3_response_older"
+                }
               ],
               "default": "step3_response_similar"
             }
           }
         },
-
         "step3_response_young": {
           "id": "step3_response_young",
           "name": "Âge jeune",
@@ -76,9 +90,10 @@
               "delayMs": 9000
             }
           ],
-          "transitions": { "onSuccess": "step4" }
+          "transitions": {
+            "onSuccess": "step4"
+          }
         },
-
         "step3_response_similar": {
           "id": "step3_response_similar",
           "name": "Âge proche",
@@ -88,9 +103,10 @@
               "delayMs": 9000
             }
           ],
-          "transitions": { "onSuccess": "step4" }
+          "transitions": {
+            "onSuccess": "step4"
+          }
         },
-
         "step3_response_older": {
           "id": "step3_response_older",
           "name": "Âge mature",
@@ -100,9 +116,10 @@
               "delayMs": 9000
             }
           ],
-          "transitions": { "onSuccess": "step4" }
+          "transitions": {
+            "onSuccess": "step4"
+          }
         },
-
         "step4": {
           "id": "step4",
           "name": "Préliminaires mentaux",
@@ -112,9 +129,10 @@
               "delayMs": 9000
             }
           ],
-          "transitions": { "onSuccess": "step5" }
+          "transitions": {
+            "onSuccess": "step5"
+          }
         },
-
         "step5": {
           "id": "step5",
           "name": "Proposition services",
@@ -132,9 +150,10 @@
               "delayMs": 9000
             }
           ],
-          "transitions": { "onSuccess": "step6" }
+          "transitions": {
+            "onSuccess": "step6"
+          }
         },
-
         "step6": {
           "id": "step6",
           "name": "Confirmation finale",
@@ -144,7 +163,233 @@
               "delayMs": 9000
             }
           ],
-          "transitions": { "onSuccess": "end" }
+          "transitions": {
+            "onSuccess": "end"
+          }
+        }
+      }
+    },
+    "acompte_conversion_lola": {
+      "name": "Lola - Conversion escort déguisée",
+      "description": "Scénario complet visant à faire payer un acompte via une fausse interaction romantique",
+      "startStep": "step_1_source",
+      "steps": {
+        "step_1_source": {
+          "id": "step_1_source",
+          "name": "Origine du numéro",
+          "messages": [
+            {
+              "content": "Salut, c'est qui ? Tu as eu mon numéro d'où ? 😏",
+              "delayMs": 7000
+            }
+          ],
+          "transitions": {
+            "onSuccess": {
+              "type": "intent_platform",
+              "expectedPlatforms": [
+                "nouslib",
+                "nous-lib",
+                "nouslibertins",
+                "nous libertins",
+                "nouslib.com"
+              ],
+              "nextStep": "step_2_location",
+              "fallback": "Alors... quelle plateforme exactement ? 😘"
+            }
+          }
+        },
+        "step_2_location": {
+          "id": "step_2_location",
+          "name": "Localisation client",
+          "messages": [
+            {
+              "content": "Tu viens d'où ? Que je voie si on est proches 😇",
+              "delayMs": 8000
+            }
+          ],
+          "transitions": {
+            "onSuccess": {
+              "type": "geo_validation",
+              "nextStep": "step_2_response",
+              "fallback": "Je connais pas... c'est proche de quelle grande ville ? 😘"
+            }
+          }
+        },
+        "step_2_response": {
+          "id": "step_2_response",
+          "name": "Réponse localisation",
+          "messages": [
+            {
+              "content": "Mmmh... j'suis à {{nearby_village}} 💋 T'es vraiment pas loin 😍",
+              "delayMs": 9000
+            }
+          ],
+          "transitions": {
+            "onSuccess": "step_3_age"
+          }
+        },
+        "step_3_age": {
+          "id": "step_3_age",
+          "name": "Âge du client",
+          "messages": [
+            {
+              "content": "Et t'as quel âge, toi ? 😏 J'aime savoir avec qui je parle...",
+              "delayMs": 8000
+            }
+          ],
+          "transitions": {
+            "onSuccess": {
+              "type": "conditional",
+              "conditions": [
+                {
+                  "condition": "age < 19",
+                  "nextStep": "step_3_young"
+                },
+                {
+                  "condition": "age >= 19 && age <= 30",
+                  "nextStep": "step_3_normal"
+                },
+                {
+                  "condition": "age > 30",
+                  "nextStep": "step_3_older"
+                }
+              ]
+            }
+          }
+        },
+        "step_3_young": {
+          "id": "step_3_young",
+          "name": "Client jeune",
+          "messages": [
+            {
+              "content": "T'es un jeune lol 😘 moi j'ai 19 😏",
+              "delayMs": 8000
+            },
+            {
+              "content": "Tu as envie de quoi ? 😈"
+            }
+          ],
+          "transitions": {
+            "onSuccess": "step_4_offer"
+          }
+        },
+        "step_3_normal": {
+          "id": "step_3_normal",
+          "name": "Client proche âge",
+          "messages": [
+            {
+              "content": "Ok cool j'ai 19 moi 😋",
+              "delayMs": 8000
+            },
+            {
+              "content": "Tu as envie de quoi ? 😘"
+            }
+          ],
+          "transitions": {
+            "onSuccess": "step_4_offer"
+          }
+        },
+        "step_3_older": {
+          "id": "step_3_older",
+          "name": "Client mature",
+          "messages": [
+            {
+              "content": "Je suis beaucoup plus jeune haha 😅 j'ai 19 ans, mais l'âge me dérange pas... j'aime bien... 😏",
+              "delayMs": 8000
+            },
+            {
+              "content": "Tu as envie de quoi ? 😈"
+            }
+          ],
+          "transitions": {
+            "onSuccess": "step_4_offer"
+          }
+        },
+        "step_4_offer": {
+          "id": "step_4_offer",
+          "name": "Propositions sexuelles",
+          "messages": [
+            {
+              "content": "Okay 150€ tu me baises comme tu veux pdt 30min. J’te suce bien salement avant si t’veux. Capote obligé."
+            },
+            {
+              "content": "300€ c’est pareil mais 1h. tu fais c’que tu veux de moi. J’me plie à tout, j’suis là pour t’régaler comme une chienne."
+            },
+            {
+              "content": "Sinon tu peux passer me récupérer et j’te suce direct dans ta caisse pour 40€, capote obligatoire. 50€ si tu veux sans, et 70€ si tu veux gicler dans ma bouche… j’avale tout. Et si t’as envie de jouer un peu avant, tu peux me lécher la chatte ou me doigter, j’kiffe."
+            }
+          ],
+          "transitions": {
+            "onSuccess": {
+              "type": "intent_detection",
+              "keywords": [
+                "30",
+                "40",
+                "50",
+                "70",
+                "150",
+                "300",
+                "pipe",
+                "baise",
+                "gicler",
+                "min",
+                "heure"
+              ],
+              "fallback": "step_4_clarification",
+              "nextStep": "step_5_rdv"
+            }
+          }
+        },
+        "step_4_clarification": {
+          "id": "step_4_clarification",
+          "name": "Demande clarification",
+          "messages": [
+            {
+              "content": "Ouais mais t’veux quoi bb ? 30min ? 1h ? 😏"
+            }
+          ],
+          "transitions": {
+            "onSuccess": "step_5_rdv"
+          }
+        },
+        "step_5_rdv": {
+          "id": "step_5_rdv",
+          "name": "Proposition de rendez-vous",
+          "messages": [
+            {
+              "content": "Tu veux qu'on se voit quand ? Je suis dispo là si tu veux 💋"
+            }
+          ],
+          "transitions": {
+            "onSuccess": "step_6_acompte"
+          }
+        },
+        "step_6_acompte": {
+          "id": "step_6_acompte",
+          "name": "Demande d'acompte",
+          "messages": [
+            {
+              "content": "Okay par contre tu passes me récup c'est bon ? On va chez toi ou un coin tranquille dehors ? Chez moi c'est mort j'ai mes parents à la maison."
+            },
+            {
+              "content": "Ouais ouais mdrrr par contre tu m'envoies 30 minimum sur PayPal avant que je te donne mon adresse, trop de fois je me suis préparée et attendue dehors comme une conne pour que personne se pointe .. donc c'est pas négociable, le reste tu peux payer en cash si tu veux..."
+            },
+            {
+              "content": "Je vais me doucher, pendant ce temps envoie les 30 et je t'envoie l'adresse ou me récupérer quand j'ai fini ma douche"
+            },
+            {
+              "content": "https://www.paypal.com/paypalme/Klarakowa"
+            },
+            {
+              "content": "💋 (photo vue unique envoyée)"
+            },
+            {
+              "content": "Si tu as pas envoyé l'argent quand je sors de la douche je te bloque j'ai pas de temps à perdre ... déso ..."
+            }
+          ],
+          "transitions": {
+            "onSuccess": "end"
+          }
         }
       }
     }

@@ -1,0 +1,109 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "profiles": {
+        "type": "object",
+        "patternProperties": {
+          ".*": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "age": { "type": "integer" },
+              "gender": { "type": "string", "enum": ["female", "male", "other"] },
+              "traits": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "language": {
+                "type": "object",
+                "properties": {
+                  "registerLevel": { "type": "string" },
+                  "vocabulary": { "type": "string" },
+                  "abbreviations": { "type": "boolean" },
+                  "slang": { "type": "boolean" }
+                },
+                "required": ["registerLevel", "vocabulary", "abbreviations", "slang"]
+              },
+              "messaging": {
+                "type": "object",
+                "properties": {
+                  "typingSpeed": { "type": "string" },
+                  "responseTime": {
+                    "type": "object",
+                    "properties": {
+                      "min": { "type": "integer" },
+                      "max": { "type": "integer" }
+                    },
+                    "required": ["min", "max"]
+                  },
+                  "emoji": {
+                    "type": "object",
+                    "properties": {
+                      "frequency": { "type": "string" },
+                      "favorite": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      }
+                    },
+                    "required": ["frequency", "favorite"]
+                  }
+                },
+                "required": ["typingSpeed", "responseTime", "emoji"]
+              },
+              "textGenerationRules": {
+                "type": "object",
+                "properties": {
+                  "typos": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": { "type": "boolean" },
+                      "frequency": { "type": "number" },
+                      "types": {
+                        "type": "object",
+                        "properties": {
+                          "keyboardProximity": { "type": "boolean" },
+                          "doubleLetters": { "type": "boolean" },
+                          "missingLetters": { "type": "boolean" }
+                        },
+                        "required": ["keyboardProximity", "doubleLetters", "missingLetters"]
+                      }
+                    },
+                    "required": ["enabled", "frequency", "types"]
+                  },
+                  "punctuation": {
+                    "type": "object",
+                    "properties": {
+                      "omitPeriods": { "type": "boolean" },
+                      "multipleQuestionMarks": { "type": "boolean" },
+                      "multipleExclamationPoints": { "type": "boolean" }
+                    },
+                    "required": ["omitPeriods", "multipleQuestionMarks", "multipleExclamationPoints"]
+                  },
+                  "capitalization": {
+                    "type": "object",
+                    "properties": {
+                      "beginSentence": { "type": "boolean" },
+                      "names": { "type": "boolean" }
+                    },
+                    "required": ["beginSentence", "names"]
+                  }
+                },
+                "required": ["typos", "punctuation", "capitalization"]
+              },
+              "persona": {
+                "type": "object",
+                "properties": {
+                  "description": { "type": "string" }
+                },
+                "required": ["description"]
+              }
+            },
+            "required": ["name", "age", "gender", "traits", "language", "messaging", "textGenerationRules", "persona"]
+          }
+        }
+      }
+    },
+    "required": ["profiles"]
+  }
+  

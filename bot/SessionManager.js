@@ -3,9 +3,9 @@
  */
 
 class ConversationSession {
-    constructor(chatId) {
+    constructor(chatId, initialStep = null) {
       this.chatId = chatId;
-      this.currentStep = 'step1'; // Étape initiale
+      this.currentStep = initialStep || 'step_1_source'; // Étape initiale dynamique
       this.previousStep = null;
       this.userData = {
         location: null,

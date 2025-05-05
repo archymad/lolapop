@@ -1,0 +1,76 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "images": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "categories": {
+            "type": "object",
+            "patternProperties": {
+              ".*": {
+                "type": "object",
+                "properties": {
+                  "path": { "type": "string" },
+                  "captions": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "sendTiming": {
+                    "type": "object",
+                    "properties": {
+                      "afterSteps": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      },
+                      "delayMs": { "type": "integer" },
+                      "onRequest": { "type": "boolean" },
+                      "keywords": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["path", "captions", "sendTiming"]
+              }
+            }
+          }
+        },
+        "required": ["enabled", "categories"]
+      },
+      "stickers": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "sets": {
+            "type": "object",
+            "patternProperties": {
+              ".*": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "triggers": {
+            "type": "object",
+            "patternProperties": {
+              ".*": {
+                "type": "object",
+                "properties": {
+                  "probability": { "type": "number" },
+                  "stickerSet": { "type": "string" }
+                },
+                "required": ["probability", "stickerSet"]
+              }
+            }
+          }
+        },
+        "required": ["enabled", "sets", "triggers"]
+      }
+    },
+    "required": ["images", "stickers"]
+  }
+  

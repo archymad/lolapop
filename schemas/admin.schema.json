@@ -1,0 +1,37 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "admin": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "port": { "type": "integer", "minimum": 1024 },
+          "accessControl": {
+            "type": "object",
+            "properties": {
+              "requirePassword": { "type": "boolean" },
+              "password": { "type": "string" },
+              "allowedIPs": {
+                "type": "array",
+                "items": { "type": "string", "format": "ipv4" }
+              }
+            },
+            "required": ["requirePassword", "password"]
+          },
+          "ui": {
+            "type": "object",
+            "properties": {
+              "theme": { "type": "string", "enum": ["light", "dark", "auto"] },
+              "language": { "type": "string" },
+              "showLogs": { "type": "boolean" }
+            },
+            "required": ["theme", "language", "showLogs"]
+          }
+        },
+        "required": ["enabled", "port", "accessControl", "ui"]
+      }
+    },
+    "required": ["admin"]
+  }
+  
